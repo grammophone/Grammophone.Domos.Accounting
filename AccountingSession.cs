@@ -145,6 +145,8 @@ namespace Grammophone.Domos.Accounting
 
 		/// <summary>
 		/// Create.
+		/// CAUTION: Will strip the security from <paramref name="domainContainer"/>
+		/// for the duration of the session.
 		/// </summary>
 		/// <param name="domainContainer">The entities domain container.</param>
 		/// <param name="agent">The acting user.</param>
@@ -158,6 +160,8 @@ namespace Grammophone.Domos.Accounting
 
 		/// <summary>
 		/// Create.
+		/// CAUTION: Will strip the security from <paramref name="domainContainer"/>
+		/// for the duration of the session.
 		/// </summary>
 		/// <param name="domainContainer">The entities domain container.</param>
 		/// <param name="agentPickPredicate">A predicate to select a user.</param>
@@ -166,7 +170,7 @@ namespace Grammophone.Domos.Accounting
 			if (domainContainer == null) throw new ArgumentNullException(nameof(domainContainer));
 			if (agentPickPredicate == null) throw new ArgumentNullException(nameof(agentPickPredicate));
 
-			U agent = domainContainer.Users.FirstOrDefault();
+			U agent = domainContainer.Users.FirstOrDefault(agentPickPredicate);
 
 			if (agent == null)
 				throw new ArgumentException("The specified user does not exist.", nameof(agentPickPredicate));
