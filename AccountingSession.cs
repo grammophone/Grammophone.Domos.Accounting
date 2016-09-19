@@ -228,6 +228,187 @@ namespace Grammophone.Domos.Accounting
 
 		#endregion
 
+		#region Protected methods
+
+		/// <summary>
+		/// Execute and persist a fresh journal, which must have not been previously
+		/// executed or persisted.
+		/// </summary>
+		/// <param name="journal">A fresh journal.</param>
+		/// <returns>Returns a task completing the action.</returns>
+		/// <exception cref="BalanceException">
+		/// Thrown when the double-entry postings amounts within the <paramref name="journal"/> 
+		/// don't sum to zero.
+		/// </exception>
+		/// <exception cref="JournalAlreadyExecutedException">
+		/// Thrown when the the journal has already been executed and persisted.
+		/// </exception>
+		private async Task ExecuteJournalAsync(J journal)
+		{
+			if (journal == null) throw new ArgumentNullException(nameof(journal));
+
+			ValidateJournal(journal);
+
+			if (journal.ID > 0)
+				throw new JournalAlreadyExecutedException();
+
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				this.DomainContainer.Journals.Add(journal);
+
+				AmendAccounts(journal.Postings);
+				AmendAccounts(journal.Remittances);
+
+				await transaction.CommitAsync();
+			}
+
+		}
+
+		/// <summary>
+		/// Ensures that all postings amounts within a journal sum to zero.
+		/// </summary>
+		/// <exception cref="BalanceException">
+		/// Thrown when the double-entry postings amounts within the <paramref name="journal"/> 
+		/// don't sum to zero.
+		/// </exception>
+		protected void ValidateJournal(J journal)
+		{
+			if (journal == null) throw new ArgumentNullException("journal");
+
+			decimal postingsBalance = journal.Postings.Sum(p => p.Amount);
+
+			if (postingsBalance != 0.0M)
+				throw new BalanceException();
+		}
+
+		/// <summary>
+		/// Amend account balances according to a collection of journal lines.
+		/// </summary>
+		protected void AmendAccounts(IEnumerable<JournalLine<U, A>> journalLines)
+		{
+			if (journalLines == null) throw new ArgumentNullException(nameof(journalLines));
+
+			foreach (var line in journalLines)
+			{
+				if (line.ID > 0)
+					throw new JournalAlreadyExecutedException(AccountingMessages.JOURNAL_LINE_ALREADY_EXECUTED);
+
+				line.Account.Balance += line.Amount;
+			}
+		}
+
+		/// <summary>
+		/// Ensures that no account will fall to negative balance
+		/// after the execution of the journal.
+		/// </summary>
+		/// <param name="journal">The journal to test.</param>
+		/// <exception cref="NegativeBalanceException{U, A}">
+		/// Thrown when at least one account balance would turn to negative
+		/// if the journal would be executed.
+		/// </exception>
+		protected void EnsureSufficientBalances(J journal)
+		{
+			if (journal == null) throw new ArgumentNullException(nameof(journal));
+
+			IReadOnlyDictionary<A, decimal> futureBalancesByAccount = PredictAccountBalances(journal);
+
+			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M))
+				throw new NegativeBalanceException<U, A>(futureBalancesByAccount);
+		}
+
+		/// <summary>
+		/// Ensures that no account will fall to negative balance
+		/// after the execution of the journal.
+		/// </summary>
+		/// <param name="journal">The journal to test.</param>
+		/// <param name="accountPredicate">
+		/// A predicate to select which accounts are tested for negative balance.
+		/// </param>
+		/// <exception cref="NegativeBalanceException{U, A}">
+		/// Thrown when at least one account balance would turn to negative
+		/// if the journal would be executed.
+		/// </exception>
+		protected void EnsureSufficientBalances(J journal, Func<A, bool> accountPredicate)
+		{
+			if (journal == null) throw new ArgumentNullException(nameof(journal));
+			if (accountPredicate == null) throw new ArgumentNullException(nameof(accountPredicate));
+
+			IReadOnlyDictionary<A, decimal> futureBalancesByAccount = PredictAccountBalances(journal);
+
+			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M && accountPredicate(entry.Key)))
+				throw new NegativeBalanceException<U, A>(futureBalancesByAccount);
+		}
+
+		/// <summary>
+		/// Predict the account balances if a journal were to be executed.
+		/// </summary>
+		/// <param name="journal">The prospective journal.</param>
+		/// <returns>Returns a dictionary having the accounts as keys and the predicted balances as values.</returns>
+		protected IReadOnlyDictionary<A, decimal> PredictAccountBalances(J journal)
+		{
+			if (journal == null) throw new ArgumentNullException(nameof(journal));
+
+			var journalLines = new List<JournalLine<U, A>>(journal.Remittances.Count + journal.Postings.Count);
+
+			journalLines.AddRange(journal.Remittances);
+			journalLines.AddRange(journal.Postings);
+
+			var futureBalancesByAccount =
+					journalLines.Select(jl => jl.Account).Distinct().ToDictionary(a => a, a => a.Balance);
+
+			for (int i = 0; i < journalLines.Count; i++)
+			{
+				var journalLine = journalLines[i];
+
+				decimal futureAccountBalance = 0.0M;
+
+				futureBalancesByAccount.TryGetValue(journalLine.Account, out futureAccountBalance);
+
+				futureAccountBalance += journalLine.Amount;
+
+				futureBalancesByAccount[journalLine.Account] = futureAccountBalance;
+			}
+
+			return futureBalancesByAccount;
+		}
+
+		/// <summary>
+		/// Create a journal to refer to an entity and 
+		/// inherit any owners of it.
+		/// </summary>
+		/// <param name="entity">The entity being referred, for example, a stateful object.</param>
+		/// <returns>
+		/// Returns a created but not persisted journal.
+		/// </returns>
+		protected J CreateJournalForEntity(object entity)
+		{
+			if (entity == null) throw new ArgumentNullException(nameof(entity));
+
+			var journal = this.DomainContainer.Journals.Create();
+
+			journal.OwningUsers.Add(this.Agent);
+
+			var userEntity = entity as IUserTrackingEntity<U>;
+
+			if (userEntity != null)
+			{
+				journal.InheritOwnerFrom(userEntity);
+			}
+			else
+			{
+				var userGroupEntity = entity as IUserGroupTrackingEntity<U>;
+
+				if (userGroupEntity != null)
+				{
+					journal.InheritOwnersFrom(userGroupEntity);
+				}
+			}
+
+			return journal;
+		}
+
+		#endregion
+
 		#region Private methods
 
 		private void Initialize(D domainContainer, U agent)
