@@ -37,7 +37,7 @@ namespace Grammophone.Domos.Accounting
 		where P : Posting<U, A>
 		where R : Remittance<U, A>
 		where J : Journal<U, ST, A, P, R>
-		where D : class, IDomosDomainContainer<U, ST, A, P, R, J>
+		where D : IDomosDomainContainer<U, ST, A, P, R, J>
 	{
 		#region Private classes
 
@@ -46,7 +46,7 @@ namespace Grammophone.Domos.Accounting
 		/// of entities of type <see cref="ITrackingEntity"/>
 		/// or <see cref="IUserTrackingEntity"/>.
 		/// </summary>
-		private class EntityListener : IEntityListener
+		private class EntityListener : IUserTrackingEntityListener
 		{
 			#region Private fields
 
@@ -137,7 +137,7 @@ namespace Grammophone.Domos.Accounting
 
 		#region Private fields
 
-		private ICollection<IEntityListener> preexistingEntityListeners;
+		private EntityListener entityListener;
 
 		#endregion
 
@@ -212,9 +212,9 @@ namespace Grammophone.Domos.Accounting
 			{
 				this.DomainContainer.EntityListeners.Clear();
 
-				foreach (var preexistingEntityListener in preexistingEntityListeners)
+				if (entityListener != null)
 				{
-					this.DomainContainer.EntityListeners.Add(preexistingEntityListener);
+					this.DomainContainer.EntityListeners.Remove(entityListener);
 				}
 
 				if (this.OwnsDomainContainer)
@@ -222,7 +222,7 @@ namespace Grammophone.Domos.Accounting
 					this.DomainContainer.Dispose();
 				}
 
-				this.DomainContainer = null;
+				this.DomainContainer = default(D);
 			}
 		}
 
@@ -416,9 +416,15 @@ namespace Grammophone.Domos.Accounting
 			this.DomainContainer = domainContainer;
 			this.Agent = agent;
 
-			this.preexistingEntityListeners = domainContainer.EntityListeners.ToArray();
-			domainContainer.EntityListeners.Clear();
-			domainContainer.EntityListeners.Add(new EntityListener(agent.ID));
+			// Does the container have user tracking? If not, add our own.
+			bool hasUserTracking = 
+				domainContainer.EntityListeners.Any(el => el is IUserTrackingEntityListener);
+
+			if (!hasUserTracking)
+			{
+				entityListener = new EntityListener(agent.ID);
+				domainContainer.EntityListeners.Add(entityListener);
+			}
 		}
 
 		#endregion
