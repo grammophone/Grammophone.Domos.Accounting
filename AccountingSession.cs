@@ -145,8 +145,10 @@ namespace Grammophone.Domos.Accounting
 
 		/// <summary>
 		/// Create.
-		/// CAUTION: Will strip the security from <paramref name="domainContainer"/>
-		/// for the duration of the session.
+		/// If the <paramref name="domainContainer"/> does not 
+		/// have a <see cref="IUserTrackingEntityListener"/>,
+		/// it will be given one in which the <paramref name="agent"/> will be 
+		/// the acting user.
 		/// </summary>
 		/// <param name="domainContainer">The entities domain container.</param>
 		/// <param name="agent">The acting user.</param>
@@ -160,8 +162,10 @@ namespace Grammophone.Domos.Accounting
 
 		/// <summary>
 		/// Create.
-		/// CAUTION: Will strip the security from <paramref name="domainContainer"/>
-		/// for the duration of the session.
+		/// If the <paramref name="domainContainer"/> does not 
+		/// have a <see cref="IUserTrackingEntityListener"/>,
+		/// it will be given one in which agent specified by <paramref name="agentPickPredicate"/>
+		/// will be the acting user.
 		/// </summary>
 		/// <param name="domainContainer">The entities domain container.</param>
 		/// <param name="agentPickPredicate">A predicate to select a user.</param>
