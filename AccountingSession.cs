@@ -349,7 +349,7 @@ namespace Grammophone.Domos.Accounting
 						break;
 				}
 
-				await this.DomainContainer.SaveChangesAsync();
+				await transaction.CommitAsync();
 
 				return transferEvent;
 			}
