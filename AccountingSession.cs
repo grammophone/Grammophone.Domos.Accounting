@@ -349,6 +349,8 @@ namespace Grammophone.Domos.Accounting
 						break;
 				}
 
+				this.DomainContainer.FundsTransferEvents.Add(transferEvent);
+
 				await transaction.CommitAsync();
 
 				return transferEvent;
