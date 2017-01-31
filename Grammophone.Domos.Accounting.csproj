@@ -42,6 +42,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -51,6 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AccountingEncryption.cs" />
     <Compile Include="AccountingException.cs" />
     <Compile Include="AccountingMessages.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -60,6 +62,7 @@
     <Compile Include="AccountingSession.cs" />
     <Compile Include="BalanceException.cs" />
     <Compile Include="JournalAlreadyExecutedException.cs" />
+    <Compile Include="Models\BankAccountInfo.cs" />
     <Compile Include="NegativeBalanceException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

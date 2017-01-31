@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Grammophone.DataAccess;
+using Grammophone.Domos.Accounting.Models;
 using Grammophone.Domos.DataAccess;
 using Grammophone.Domos.Domain;
 using Grammophone.Domos.Domain.Accounting;
@@ -232,6 +233,130 @@ namespace Grammophone.Domos.Accounting
 
 		#endregion
 
+		#region Public methods
+
+		/// <summary>
+		/// Create and persist a funds transfer request.
+		/// </summary>
+		/// <param name="bankAccountInfo">The bank account info to be encrypted and recorded.</param>
+		/// <param name="amount">If positive, the amount to be deposited to the account, else withdrawed.</param>
+		/// <param name="creditSystemID">The ID of the credit system.</param>
+		/// <param name="utcDate">The time instant in UTC.</param>
+		/// <param name="transactionID">The tracking ID of the transaction.</param>
+		/// <param name="lineID">Optional tracking ID of the line.</param>
+		/// <returns>Returns a persisted request.</returns>
+		public async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
+			BankAccountInfo bankAccountInfo,
+			decimal amount,
+			long creditSystemID,
+			DateTime utcDate,
+			string transactionID,
+			string lineID)
+		{
+			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
+
+			var ownEncryptedBankAccountInfo = bankAccountInfo.Encrypt(this.DomainContainer);
+
+			return await CreateFundsTransferRequestAsync(
+				ownEncryptedBankAccountInfo, 
+				amount, 
+				creditSystemID,
+				utcDate, 
+				transactionID, 
+				lineID);
+		}
+
+		/// <summary>
+		/// Create and persist a funds transfer request.
+		/// </summary>
+		/// <param name="bankAccountHolder">An entity holding a bank account.</param>
+		/// <param name="amount">If positive, the amount to be deposited to the account, else withdrawed.</param>
+		/// <param name="creditSystemID">The ID of the credit system.</param>
+		/// <param name="utcDate">The time instant in UTC.</param>
+		/// <param name="transactionID">The tracking ID of the transaction.</param>
+		/// <param name="lineID">Optional tracking ID of the line.</param>
+		/// <returns>Returns a persisted request.</returns>
+		public async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
+			IBankAccountHolder bankAccountHolder,
+			decimal amount,
+			long creditSystemID,
+			DateTime utcDate,
+			string transactionID,
+			string lineID = null)
+		{
+			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
+
+			var ownEncryptedBankAccountInfo = bankAccountHolder.EncryptedBankAccountInfo.Clone(this.DomainContainer);
+
+			return await CreateFundsTransferRequestAsync(
+				ownEncryptedBankAccountInfo,
+				amount,
+				creditSystemID,
+				utcDate,
+				transactionID,
+				lineID);
+		}
+
+		/// <summary>
+		/// Add an event for a funds tranfer request.
+		/// </summary>
+		/// <param name="request">The funds tranfer request.</param>
+		/// <param name="responseCode">The response code of the event.</param>
+		/// <param name="utcDate">The event time, in UTC.</param>
+		/// <param name="traceCode">The trace code for the event.</param>
+		/// <param name="eventType">The type of the event.</param>
+		/// <param name="comments">Optional comments.</param>
+		/// <returns>
+		/// Returns the created event.
+		/// </returns>
+		public async Task<FundsTransferEvent> AddFundsTransferEventAsync(
+			FundsTransferRequest request,
+			string responseCode,
+			DateTime utcDate,
+			string traceCode,
+			FundsTransferEventType eventType,
+			string comments = null)
+		{
+			if (request == null) throw new ArgumentNullException(nameof(request));
+			if (responseCode == null) throw new ArgumentNullException(nameof(responseCode));
+			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
+			if (traceCode == null) throw new ArgumentNullException(nameof(traceCode));
+
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				var transferEvent = this.DomainContainer.FundsTransferEvents.Create();
+
+				transferEvent.Comments = comments;
+				transferEvent.ResponseCode = responseCode;
+				transferEvent.TraceCode = traceCode;
+				transferEvent.Type = eventType;
+				transferEvent.Date = utcDate;
+
+				transferEvent.Request = request;
+
+				switch (eventType)
+				{
+					case FundsTransferEventType.Accepted:
+						request.State = FundsTransferState.Pending;
+						break;
+
+					case FundsTransferEventType.Failed:
+						request.State = FundsTransferState.Failed;
+						break;
+
+					case FundsTransferEventType.Succeeded:
+						request.State = FundsTransferState.Succeeded;
+						break;
+				}
+
+				await this.DomainContainer.SaveChangesAsync();
+
+				return transferEvent;
+			}
+		}
+
+		#endregion
+
 		#region Protected methods
 
 		/// <summary>
@@ -247,7 +372,7 @@ namespace Grammophone.Domos.Accounting
 		/// <exception cref="JournalAlreadyExecutedException">
 		/// Thrown when the the journal has already been executed and persisted.
 		/// </exception>
-		private async Task ExecuteJournalAsync(J journal)
+		protected async Task ExecuteJournalAsync(J journal)
 		{
 			if (journal == null) throw new ArgumentNullException(nameof(journal));
 
@@ -429,6 +554,38 @@ namespace Grammophone.Domos.Accounting
 				entityListener = new EntityListener(agent.ID);
 				domainContainer.EntityListeners.Add(entityListener);
 			}
+		}
+
+		private async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
+			EncryptedBankAccountInfo ownEncryptedBankAccountInfo,
+			decimal amount,
+			long creditSystemID,
+			DateTime utcDate,
+			string transactionID,
+			string lineID = null)
+		{
+			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
+			if (transactionID == null) throw new ArgumentNullException(nameof(transactionID));
+			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
+
+			var request = this.DomainContainer.FundsTransferRequests.Create();
+
+			request.Date = utcDate;
+			request.Amount = amount;
+			request.State = FundsTransferState.Pending;
+			request.TransactionID = transactionID;
+			request.LineID = lineID;
+			request.CreditSystemID = creditSystemID;
+			request.EncryptedBankAccountInfo = ownEncryptedBankAccountInfo;
+
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				this.DomainContainer.FundsTransferRequests.Add(request);
+
+				await transaction.CommitAsync();
+			}
+
+			return request;
 		}
 
 		#endregion
