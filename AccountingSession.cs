@@ -322,39 +322,36 @@ namespace Grammophone.Domos.Accounting
 			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
 			if (traceCode == null) throw new ArgumentNullException(nameof(traceCode));
 
-			using (var transaction = this.DomainContainer.BeginTransaction())
+			var transferEvent = this.DomainContainer.FundsTransferEvents.Create();
+
+			transferEvent.Comments = comments;
+			transferEvent.ResponseCode = responseCode;
+			transferEvent.TraceCode = traceCode;
+			transferEvent.Type = eventType;
+			transferEvent.Date = utcDate;
+
+			transferEvent.Request = request;
+
+			switch (eventType)
 			{
-				var transferEvent = this.DomainContainer.FundsTransferEvents.Create();
+				case FundsTransferEventType.Accepted:
+					request.State = FundsTransferState.Pending;
+					break;
 
-				transferEvent.Comments = comments;
-				transferEvent.ResponseCode = responseCode;
-				transferEvent.TraceCode = traceCode;
-				transferEvent.Type = eventType;
-				transferEvent.Date = utcDate;
+				case FundsTransferEventType.Failed:
+					request.State = FundsTransferState.Failed;
+					break;
 
-				transferEvent.Request = request;
-
-				switch (eventType)
-				{
-					case FundsTransferEventType.Accepted:
-						request.State = FundsTransferState.Pending;
-						break;
-
-					case FundsTransferEventType.Failed:
-						request.State = FundsTransferState.Failed;
-						break;
-
-					case FundsTransferEventType.Succeeded:
-						request.State = FundsTransferState.Succeeded;
-						break;
-				}
-
-				this.DomainContainer.FundsTransferEvents.Add(transferEvent);
-
-				await transaction.CommitAsync();
-
-				return transferEvent;
+				case FundsTransferEventType.Succeeded:
+					request.State = FundsTransferState.Succeeded;
+					break;
 			}
+
+			this.DomainContainer.FundsTransferEvents.Add(transferEvent);
+
+			await this.DomainContainer.SaveChangesAsync();
+
+			return transferEvent;
 		}
 
 		#endregion
@@ -580,12 +577,9 @@ namespace Grammophone.Domos.Accounting
 			request.CreditSystemID = creditSystemID;
 			request.EncryptedBankAccountInfo = ownEncryptedBankAccountInfo;
 
-			using (var transaction = this.DomainContainer.BeginTransaction())
-			{
-				this.DomainContainer.FundsTransferRequests.Add(request);
+			this.DomainContainer.FundsTransferRequests.Add(request);
 
-				await transaction.CommitAsync();
-			}
+			await this.DomainContainer.SaveChangesAsync();
 
 			return request;
 		}
