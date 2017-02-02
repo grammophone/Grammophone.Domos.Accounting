@@ -215,8 +215,6 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (this.DomainContainer != null)
 			{
-				this.DomainContainer.EntityListeners.Clear();
-
 				if (entityListener != null)
 				{
 					this.DomainContainer.EntityListeners.Remove(entityListener);
