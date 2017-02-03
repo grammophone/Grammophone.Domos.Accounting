@@ -327,6 +327,7 @@ namespace Grammophone.Domos.Accounting
 			switch (eventType)
 			{
 				case FundsTransferEventType.Submitted:
+				case FundsTransferEventType.Accepted:
 					request.State = FundsTransferState.Submitted;
 					break;
 
