@@ -229,10 +229,6 @@ namespace Grammophone.Domos.Accounting
 			}
 		}
 
-		#endregion
-
-		#region Public methods
-
 		/// <summary>
 		/// Create and persist a funds transfer request.
 		/// </summary>
@@ -332,8 +328,8 @@ namespace Grammophone.Domos.Accounting
 
 			switch (eventType)
 			{
-				case FundsTransferEventType.Accepted:
-					request.State = FundsTransferState.Pending;
+				case FundsTransferEventType.Submitted:
+					request.State = FundsTransferState.Submitted;
 					break;
 
 				case FundsTransferEventType.Failed:
