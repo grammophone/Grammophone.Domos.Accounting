@@ -295,26 +295,24 @@ namespace Grammophone.Domos.Accounting
 		/// Add an event for a funds tranfer request.
 		/// </summary>
 		/// <param name="request">The funds tranfer request.</param>
-		/// <param name="responseCode">The response code of the event.</param>
 		/// <param name="utcDate">The event time, in UTC.</param>
-		/// <param name="traceCode">The trace code for the event.</param>
 		/// <param name="eventType">The type of the event.</param>
+		/// <param name="responseCode">The optinal response code of the event.</param>
+		/// <param name="traceCode">The optional trace code for the event.</param>
 		/// <param name="comments">Optional comments.</param>
 		/// <returns>
 		/// Returns the created event.
 		/// </returns>
 		public async Task<FundsTransferEvent> AddFundsTransferEventAsync(
 			FundsTransferRequest request,
-			string responseCode,
 			DateTime utcDate,
-			string traceCode,
 			FundsTransferEventType eventType,
+			string responseCode = null,
+			string traceCode = null,
 			string comments = null)
 		{
 			if (request == null) throw new ArgumentNullException(nameof(request));
-			if (responseCode == null) throw new ArgumentNullException(nameof(responseCode));
 			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
-			if (traceCode == null) throw new ArgumentNullException(nameof(traceCode));
 
 			var transferEvent = this.DomainContainer.FundsTransferEvents.Create();
 
