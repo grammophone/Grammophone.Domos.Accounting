@@ -237,7 +237,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="creditSystemID">The ID of the credit system.</param>
 		/// <param name="utcDate">The time instant in UTC.</param>
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
-		/// <param name="lineID">Optional tracking ID of the line.</param>
+		/// <param name="batchID">Optional batch ID.</param>
 		/// <returns>Returns a persisted request.</returns>
 		public async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
 			BankAccountInfo bankAccountInfo,
@@ -245,7 +245,7 @@ namespace Grammophone.Domos.Accounting
 			long creditSystemID,
 			DateTime utcDate,
 			string transactionID,
-			string lineID)
+			string batchID = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 
@@ -257,7 +257,7 @@ namespace Grammophone.Domos.Accounting
 				creditSystemID,
 				utcDate, 
 				transactionID, 
-				lineID);
+				batchID);
 		}
 
 		/// <summary>
@@ -268,7 +268,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="creditSystemID">The ID of the credit system.</param>
 		/// <param name="utcDate">The time instant in UTC.</param>
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
-		/// <param name="lineID">Optional tracking ID of the line.</param>
+		/// <param name="batchID">Optional batch ID.</param>
 		/// <returns>Returns a persisted request.</returns>
 		public async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
 			IBankAccountHolder bankAccountHolder,
@@ -276,7 +276,7 @@ namespace Grammophone.Domos.Accounting
 			long creditSystemID,
 			DateTime utcDate,
 			string transactionID,
-			string lineID = null)
+			string batchID = null)
 		{
 			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
 
@@ -288,7 +288,7 @@ namespace Grammophone.Domos.Accounting
 				creditSystemID,
 				utcDate,
 				transactionID,
-				lineID);
+				batchID);
 		}
 
 		/// <summary>
@@ -554,7 +554,7 @@ namespace Grammophone.Domos.Accounting
 			long creditSystemID,
 			DateTime utcDate,
 			string transactionID,
-			string lineID = null)
+			string batchID = null)
 		{
 			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
 			if (transactionID == null) throw new ArgumentNullException(nameof(transactionID));
@@ -566,7 +566,7 @@ namespace Grammophone.Domos.Accounting
 			request.Amount = amount;
 			request.State = FundsTransferState.Pending;
 			request.TransactionID = transactionID;
-			request.LineID = lineID;
+			request.BatchID = batchID;
 			request.CreditSystemID = creditSystemID;
 			request.EncryptedBankAccountInfo = ownEncryptedBankAccountInfo;
 
