@@ -230,6 +230,10 @@ namespace Grammophone.Domos.Accounting
 			}
 		}
 
+		#endregion
+
+		#region Protected methods
+
 		/// <summary>
 		/// Create and persist a funds transfer request.
 		/// </summary>
@@ -240,7 +244,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <returns>Returns a persisted request.</returns>
-		public async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
+		protected async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
 			BankAccountInfo bankAccountInfo,
 			decimal amount,
 			long creditSystemID,
@@ -253,11 +257,11 @@ namespace Grammophone.Domos.Accounting
 			var ownEncryptedBankAccountInfo = bankAccountInfo.Encrypt(this.DomainContainer);
 
 			return await CreateFundsTransferRequestAsync(
-				ownEncryptedBankAccountInfo, 
-				amount, 
+				ownEncryptedBankAccountInfo,
+				amount,
 				creditSystemID,
-				utcDate, 
-				transactionID, 
+				utcDate,
+				transactionID,
 				batchID);
 		}
 
@@ -271,7 +275,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <returns>Returns a persisted request.</returns>
-		public async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
+		protected async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
 			IBankAccountHolder bankAccountHolder,
 			decimal amount,
 			long creditSystemID,
@@ -308,7 +312,7 @@ namespace Grammophone.Domos.Accounting
 		/// Thrown when the <paramref name="request"/> already has an event of the
 		/// given <paramref name="eventType"/>.
 		/// </exception>
-		public async Task<FundsTransferEvent> AddFundsTransferEventAsync(
+		protected async Task<FundsTransferEvent> AddFundsTransferEventAsync(
 			FundsTransferRequest request,
 			DateTime utcDate,
 			FundsTransferEventType eventType,
@@ -363,10 +367,6 @@ namespace Grammophone.Domos.Accounting
 				return transferEvent;
 			}
 		}
-
-		#endregion
-
-		#region Protected methods
 
 		/// <summary>
 		/// Execute and persist a fresh journal, which must have not been previously
