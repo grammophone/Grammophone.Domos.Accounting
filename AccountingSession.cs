@@ -235,7 +235,9 @@ namespace Grammophone.Domos.Accounting
 		#region Protected methods
 
 		/// <summary>
-		/// Create and persist a funds transfer request.
+		/// Create and persist a <see cref="FundsTransferRequest"/> and record
+		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Queued"/>
+		/// in it.
 		/// </summary>
 		/// <param name="bankAccountInfo">The bank account info to be encrypted and recorded.</param>
 		/// <param name="amount">If positive, the amount to be deposited to the account, else withdrawed.</param>
@@ -243,8 +245,8 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="utcDate">The time instant in UTC.</param>
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
 		/// <param name="batchID">Optional batch ID.</param>
-		/// <returns>Returns a persisted request.</returns>
-		protected async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
+		/// <returns>Returns the event recording the queueing of the request.</returns>
+		protected async Task<FundsTransferEvent> CreateFundsTransferRequestAsync(
 			BankAccountInfo bankAccountInfo,
 			decimal amount,
 			long creditSystemID,
@@ -266,7 +268,9 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
-		/// Create and persist a funds transfer request.
+		/// Create and persist a <see cref="FundsTransferRequest"/> and record
+		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Queued"/>
+		/// in it.
 		/// </summary>
 		/// <param name="bankAccountHolder">An entity holding a bank account.</param>
 		/// <param name="amount">If positive, the amount to be deposited to the account, else withdrawed.</param>
@@ -274,8 +278,8 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="utcDate">The time instant in UTC.</param>
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
 		/// <param name="batchID">Optional batch ID.</param>
-		/// <returns>Returns a persisted request.</returns>
-		protected async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
+		/// <returns>Returns the event recording the queueing of the request.</returns>
+		protected async Task<FundsTransferEvent> CreateFundsTransferRequestAsync(
 			IBankAccountHolder bankAccountHolder,
 			decimal amount,
 			long creditSystemID,
@@ -565,7 +569,19 @@ namespace Grammophone.Domos.Accounting
 			}
 		}
 
-		private async Task<FundsTransferRequest> CreateFundsTransferRequestAsync(
+		/// <summary>
+		/// Create and persist a <see cref="FundsTransferRequest"/> and record
+		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Queued"/>
+		/// in it.
+		/// </summary>
+		/// <param name="ownEncryptedBankAccountInfo">An account info to be assigned to the request.</param>
+		/// <param name="amount">The amount of the transfer, positive for deposit, negative for withdrawal.</param>
+		/// <param name="creditSystemID">The ID of the credit system.</param>
+		/// <param name="utcDate">The time in UTC.</param>
+		/// <param name="transactionID">The ID of the transaction.</param>
+		/// <param name="batchID">Optional ID of the batch.</param>
+		/// <returns>Returns the event recording the queueing of the request.</returns>
+		private async Task<FundsTransferEvent> CreateFundsTransferRequestAsync(
 			EncryptedBankAccountInfo ownEncryptedBankAccountInfo,
 			decimal amount,
 			long creditSystemID,
@@ -577,21 +593,25 @@ namespace Grammophone.Domos.Accounting
 			if (transactionID == null) throw new ArgumentNullException(nameof(transactionID));
 			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
 
-			var request = this.DomainContainer.FundsTransferRequests.Create();
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				var request = this.DomainContainer.FundsTransferRequests.Create();
 
-			request.Date = utcDate;
-			request.Amount = amount;
-			request.State = FundsTransferState.Pending;
-			request.TransactionID = transactionID;
-			request.BatchID = batchID;
-			request.CreditSystemID = creditSystemID;
-			request.EncryptedBankAccountInfo = ownEncryptedBankAccountInfo;
+				request.Amount = amount;
+				request.State = FundsTransferState.Pending;
+				request.TransactionID = transactionID;
+				request.BatchID = batchID;
+				request.CreditSystemID = creditSystemID;
+				request.EncryptedBankAccountInfo = ownEncryptedBankAccountInfo;
 
-			this.DomainContainer.FundsTransferRequests.Add(request);
+				this.DomainContainer.FundsTransferRequests.Add(request);
 
-			await this.DomainContainer.SaveChangesAsync();
+				var queueEvent = await AddFundsTransferEventAsync(request, utcDate, FundsTransferEventType.Queued);
 
-			return request;
+				await transaction.CommitAsync();
+
+				return queueEvent;
+			}
 		}
 
 		#endregion
