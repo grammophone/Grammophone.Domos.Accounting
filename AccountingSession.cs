@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -303,6 +304,10 @@ namespace Grammophone.Domos.Accounting
 		/// <returns>
 		/// Returns the created event.
 		/// </returns>
+		/// <exception cref="AccountingException">
+		/// Thrown when the <paramref name="request"/> already has an event of the
+		/// given <paramref name="eventType"/>.
+		/// </exception>
 		public async Task<FundsTransferEvent> AddFundsTransferEventAsync(
 			FundsTransferRequest request,
 			DateTime utcDate,
@@ -314,37 +319,49 @@ namespace Grammophone.Domos.Accounting
 			if (request == null) throw new ArgumentNullException(nameof(request));
 			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
 
-			var transferEvent = this.DomainContainer.FundsTransferEvents.Create();
-
-			transferEvent.Comments = comments;
-			transferEvent.ResponseCode = responseCode;
-			transferEvent.TraceCode = traceCode;
-			transferEvent.Type = eventType;
-			transferEvent.Date = utcDate;
-
-			transferEvent.Request = request;
-
-			switch (eventType)
+			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
-				case FundsTransferEventType.Submitted:
-				case FundsTransferEventType.Accepted:
-					request.State = FundsTransferState.Submitted;
-					break;
+				bool typeIsAlreadyAdded = await
+					this.DomainContainer.FundsTransferEvents
+					.Where(e => e.RequestID == request.ID && e.Type == eventType)
+					.AnyAsync();
 
-				case FundsTransferEventType.Failed:
-					request.State = FundsTransferState.Failed;
-					break;
+				if (typeIsAlreadyAdded)
+					throw new AccountingException(
+						$"An event of type '{eventType}' already exists for request with transaction ID '{request.TransactionID}'.");
 
-				case FundsTransferEventType.Succeeded:
-					request.State = FundsTransferState.Succeeded;
-					break;
+				var transferEvent = this.DomainContainer.FundsTransferEvents.Create();
+
+				transferEvent.Comments = comments;
+				transferEvent.ResponseCode = responseCode;
+				transferEvent.TraceCode = traceCode;
+				transferEvent.Type = eventType;
+				transferEvent.Date = utcDate;
+
+				transferEvent.Request = request;
+
+				switch (eventType)
+				{
+					case FundsTransferEventType.Submitted:
+					case FundsTransferEventType.Accepted:
+						request.State = FundsTransferState.Submitted;
+						break;
+
+					case FundsTransferEventType.Failed:
+						request.State = FundsTransferState.Failed;
+						break;
+
+					case FundsTransferEventType.Succeeded:
+						request.State = FundsTransferState.Succeeded;
+						break;
+				}
+
+				this.DomainContainer.FundsTransferEvents.Add(transferEvent);
+
+				await transaction.CommitAsync();
+
+				return transferEvent;
 			}
-
-			this.DomainContainer.FundsTransferEvents.Add(transferEvent);
-
-			await this.DomainContainer.SaveChangesAsync();
-
-			return transferEvent;
 		}
 
 		#endregion
