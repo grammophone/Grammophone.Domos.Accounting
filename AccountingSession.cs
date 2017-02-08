@@ -204,6 +204,22 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		public bool OwnsDomainContainer { get; private set; }
 
+		/// <summary>
+		/// Get the <see cref="FundsTransferRequest"/>s which
+		/// only have a <see cref="FundsTransferEvent"/> of <see cref="FundsTransferEvent.Type"/>
+		/// set as <see cref="FundsTransferEventType.Queued"/>.
+		/// </summary>
+		public IQueryable<FundsTransferRequest> PendingFundTransferRequests
+		{
+			get
+			{
+				return from ftr in this.DomainContainer.FundsTransferRequests
+							 let lastEventType = ftr.Events.OrderByDescending(e => e.Date).Select(e => e.Type).FirstOrDefault()
+							 where lastEventType == FundsTransferEventType.Queued
+							 select ftr;
+			}
+		}
+
 		#endregion
 
 		#region Public methods
