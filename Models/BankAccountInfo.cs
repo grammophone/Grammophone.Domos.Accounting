@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 using Grammophone.DataAccess;
 using Grammophone.Domos.Domain.Accounting;
 
@@ -23,24 +24,28 @@ namespace Grammophone.Domos.Accounting.Models
 		/// </summary>
 		[Required]
 		[MaxLength(50)]
+		[XmlAttribute]
 		public virtual string AccountNumber { get; set; }
 
 		/// <summary>
 		/// The bank number, used in Canada.
 		/// </summary>
 		[MaxLength(6)]
+		[XmlAttribute]
 		public virtual string BankNumber { get; set; }
 
 		/// <summary>
 		/// The transit number, specified in the cheque.
 		/// </summary>
 		[MaxLength(16)]
+		[XmlAttribute]
 		public virtual string TransitNumber { get; set; }
 
 		/// <summary>
 		/// Account code, used in United states.
 		/// </summary>
 		[MaxLength(6)]
+		[XmlAttribute]
 		public virtual string AccountCode { get; set; }
 	}
 }

@@ -246,10 +246,6 @@ namespace Grammophone.Domos.Accounting
 			}
 		}
 
-		#endregion
-
-		#region Protected methods
-
 		/// <summary>
 		/// Create and persist a <see cref="FundsTransferRequest"/> and record
 		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Queued"/>
@@ -262,7 +258,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <returns>Returns the event recording the queueing of the request.</returns>
-		protected async Task<FundsTransferEvent> CreateFundsTransferRequestAsync(
+		public async Task<FundsTransferEvent> CreateFundsTransferRequestAsync(
 			BankAccountInfo bankAccountInfo,
 			decimal amount,
 			long creditSystemID,
@@ -295,7 +291,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <returns>Returns the event recording the queueing of the request.</returns>
-		protected async Task<FundsTransferEvent> CreateFundsTransferRequestAsync(
+		public async Task<FundsTransferEvent> CreateFundsTransferRequestAsync(
 			IBankAccountHolder bankAccountHolder,
 			decimal amount,
 			long creditSystemID,
@@ -332,7 +328,7 @@ namespace Grammophone.Domos.Accounting
 		/// Thrown when the <paramref name="request"/> already has an event of the
 		/// given <paramref name="eventType"/>.
 		/// </exception>
-		protected async Task<FundsTransferEvent> AddFundsTransferEventAsync(
+		public async Task<FundsTransferEvent> AddFundsTransferEventAsync(
 			FundsTransferRequest request,
 			DateTime utcDate,
 			FundsTransferEventType eventType,
@@ -387,6 +383,43 @@ namespace Grammophone.Domos.Accounting
 				return transferEvent;
 			}
 		}
+
+		/// <summary>
+		/// From a set of funds transfer requests, filter those which are pending
+		/// a response.
+		/// </summary>
+		/// <param name="creditSystemID">The credit system of the requests.</param>
+		/// <param name="fundsTransferRequestsQuery">The set of requests.</param>
+		/// <param name="includeSubmitted">In the results, include requests which are already submitted.</param>
+		/// <returns>Returns the set of filtered requests.</returns>
+		public IQueryable<FundsTransferRequest> FilterPendingFundsTransferRequests(
+			long creditSystemID,
+			IQueryable<FundsTransferRequest> fundsTransferRequestsQuery,
+			bool includeSubmitted = false)
+		{
+			if (fundsTransferRequestsQuery == null) throw new ArgumentNullException(nameof(fundsTransferRequestsQuery));
+
+			if (includeSubmitted)
+			{
+				return from ftr in fundsTransferRequestsQuery
+							 let lastEventType = ftr.Events.OrderByDescending(e => e.Date).Select(e => e.Type).FirstOrDefault()
+							 where lastEventType == FundsTransferEventType.Queued || lastEventType == FundsTransferEventType.Submitted
+							 && ftr.CreditSystemID == creditSystemID
+							 select ftr;
+			}
+			else
+			{
+				return from ftr in fundsTransferRequestsQuery
+							 let lastEventType = ftr.Events.OrderByDescending(e => e.Date).Select(e => e.Type).FirstOrDefault()
+							 where lastEventType == FundsTransferEventType.Queued
+							 && ftr.CreditSystemID == creditSystemID
+							 select ftr;
+			}
+		}
+
+		#endregion
+
+		#region Protected methods
 
 		/// <summary>
 		/// Execute and persist a fresh journal, which must have not been previously
