@@ -183,6 +183,8 @@ namespace Grammophone.Domos.Accounting
 			if (domainContainer == null) throw new ArgumentNullException(nameof(domainContainer));
 			if (agent == null) throw new ArgumentNullException(nameof(agent));
 
+			this.ConfigurationSectionName = configurationSectionName;
+
 			this.DIContainer = diContainersCache.Get(configurationSectionName);
 
 			Initialize(domainContainer, agent);
@@ -204,6 +206,8 @@ namespace Grammophone.Domos.Accounting
 			if (domainContainer == null) throw new ArgumentNullException(nameof(domainContainer));
 			if (agentPickPredicate == null) throw new ArgumentNullException(nameof(agentPickPredicate));
 
+			this.ConfigurationSectionName = configurationSectionName;
+
 			this.DIContainer = diContainersCache.Get(configurationSectionName);
 
 			U agent = domainContainer.Users.FirstOrDefault(agentPickPredicate);
@@ -224,6 +228,8 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (configurationSectionName == null) throw new ArgumentNullException(nameof(configurationSectionName));
 			if (agentPickPredicate == null) throw new ArgumentNullException(nameof(agentPickPredicate));
+
+			this.ConfigurationSectionName = configurationSectionName;
 
 			this.DIContainer = diContainersCache.Get(configurationSectionName);
 
@@ -257,6 +263,11 @@ namespace Grammophone.Domos.Accounting
 		/// The domain container used in the session.
 		/// </summary>
 		public D DomainContainer { get; private set; }
+
+		/// <summary>
+		/// The name of the configuration section for this accounting session.
+		/// </summary>
+		public string ConfigurationSectionName { get; private set; }
 
 		/// <summary>
 		/// The user operating the session actions.
