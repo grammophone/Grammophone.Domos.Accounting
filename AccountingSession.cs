@@ -1,16 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data.Entity;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using Grammophone.Caching;
 using Grammophone.DataAccess;
 using Grammophone.Domos.Accounting.Models;
 using Grammophone.Domos.DataAccess;
 using Grammophone.Domos.Domain;
 using Grammophone.Domos.Domain.Accounting;
 using Grammophone.Domos.Domain.Workflow;
+using Microsoft.Practices.Unity;
+using Microsoft.Practices.Unity.Configuration;
 
 namespace Grammophone.Domos.Accounting
 {
@@ -41,6 +45,15 @@ namespace Grammophone.Domos.Accounting
 		where J : Journal<U, ST, A, P, R>
 		where D : IDomosDomainContainer<U, ST, A, P, R, J>
 	{
+		#region Constants
+
+		/// <summary>
+		/// The size of <see cref="diContainersCache"/>.
+		/// </summary>
+		private const int DIContainersCacheSize = 4096;
+
+		#endregion
+
 		#region Private classes
 
 		/// <summary>
@@ -139,6 +152,15 @@ namespace Grammophone.Domos.Accounting
 
 		#region Private fields
 
+		/// <summary>
+		/// Cache of DI conainers by configuration section names.
+		/// </summary>
+		private static MRUCache<string, IUnityContainer> diContainersCache;
+
+		/// <summary>
+		/// If not null, this entity listener is added to the <see cref="DomainContainer"/>
+		/// in case of an absence of another <see cref="IUserTrackingEntityListener"/> in it.
+		/// </summary>
 		private EntityListener entityListener;
 
 		#endregion
@@ -152,12 +174,16 @@ namespace Grammophone.Domos.Accounting
 		/// it will be given one in which the <paramref name="agent"/> will be 
 		/// the acting user.
 		/// </summary>
+		/// <param name="configurationSectionName">The element name of a Unity configuration section.</param>
 		/// <param name="domainContainer">The entities domain container.</param>
 		/// <param name="agent">The acting user.</param>
-		public AccountingSession(D domainContainer, U agent)
+		public AccountingSession(string configurationSectionName, D domainContainer, U agent)
 		{
+			if (configurationSectionName == null) throw new ArgumentNullException(nameof(configurationSectionName));
 			if (domainContainer == null) throw new ArgumentNullException(nameof(domainContainer));
 			if (agent == null) throw new ArgumentNullException(nameof(agent));
+
+			this.DIContainer = diContainersCache.Get(configurationSectionName);
 
 			Initialize(domainContainer, agent);
 		}
@@ -169,12 +195,16 @@ namespace Grammophone.Domos.Accounting
 		/// it will be given one in which agent specified by <paramref name="agentPickPredicate"/>
 		/// will be the acting user.
 		/// </summary>
+		/// <param name="configurationSectionName">The element name of a Unity configuration section.</param>
 		/// <param name="domainContainer">The entities domain container.</param>
 		/// <param name="agentPickPredicate">A predicate to select a user.</param>
-		public AccountingSession(D domainContainer, Expression<Func<U, bool>> agentPickPredicate)
+		public AccountingSession(string configurationSectionName, D domainContainer, Expression<Func<U, bool>> agentPickPredicate)
 		{
+			if (configurationSectionName == null) throw new ArgumentNullException(nameof(configurationSectionName));
 			if (domainContainer == null) throw new ArgumentNullException(nameof(domainContainer));
 			if (agentPickPredicate == null) throw new ArgumentNullException(nameof(agentPickPredicate));
+
+			this.DIContainer = diContainersCache.Get(configurationSectionName);
 
 			U agent = domainContainer.Users.FirstOrDefault(agentPickPredicate);
 
@@ -182,6 +212,41 @@ namespace Grammophone.Domos.Accounting
 				throw new ArgumentException("The specified user does not exist.", nameof(agentPickPredicate));
 
 			Initialize(domainContainer, agent);
+		}
+
+		/// <summary>
+		/// Create using an own <see cref="DomainContainer"/>
+		/// specified in <see cref="DIContainer"/>.
+		/// </summary>
+		/// <param name="configurationSectionName">The element name of a Unity configuration section.</param>
+		/// <param name="agentPickPredicate">A predicate to select a user.</param>
+		public AccountingSession(string configurationSectionName, Expression<Func<U, bool>> agentPickPredicate)
+		{
+			if (configurationSectionName == null) throw new ArgumentNullException(nameof(configurationSectionName));
+			if (agentPickPredicate == null) throw new ArgumentNullException(nameof(agentPickPredicate));
+
+			this.DIContainer = diContainersCache.Get(configurationSectionName);
+
+			var domainContainer = this.DIContainer.Resolve<D>();
+
+			U agent = domainContainer.Users.FirstOrDefault(agentPickPredicate);
+
+			if (agent == null)
+				throw new ArgumentException("The specified user does not exist.", nameof(agentPickPredicate));
+
+			this.OwnsDomainContainer = true;
+
+			Initialize(domainContainer, agent);
+		}
+
+		/// <summary>
+		/// Static initialization.
+		/// </summary>
+		static AccountingSession()
+		{
+			diContainersCache = new MRUCache<string, IUnityContainer>(
+				CreateDIContainer,
+				DIContainersCacheSize);
 		}
 
 		#endregion
@@ -219,6 +284,15 @@ namespace Grammophone.Domos.Accounting
 							 select ftr;
 			}
 		}
+
+		#endregion
+
+		#region Protected properties
+
+		/// <summary>
+		/// The Unity container dedicated to the accounting session.
+		/// </summary>
+		protected IUnityContainer DIContainer { get; private set; }
 
 		#endregion
 
@@ -661,6 +735,24 @@ namespace Grammophone.Domos.Accounting
 
 				return queueEvent;
 			}
+		}
+
+		/// <summary>
+		/// Create a Unity DI container from a configuration section.
+		/// </summary>
+		/// <param name="configurationSectionName">The element name of the configuratio section.</param>
+		/// <returns>Returns the container.</returns>
+		private static IUnityContainer CreateDIContainer(string configurationSectionName)
+		{
+			if (configurationSectionName == null) throw new ArgumentNullException(nameof(configurationSectionName));
+
+			var configurationSection = ConfigurationManager.GetSection(configurationSectionName)
+				as UnityConfigurationSection;
+
+			if (configurationSection == null)
+				throw new AccountingException($"The '{configurationSectionName}' configuration section is not defined.");
+
+			return new UnityContainer().LoadConfiguration(configurationSection);
 		}
 
 		#endregion
