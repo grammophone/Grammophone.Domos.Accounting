@@ -54,6 +54,30 @@ namespace Grammophone.Domos.Accounting
 
 		#endregion
 
+		#region Public classes
+
+		/// <summary>
+		/// Result of an accounting action.
+		/// </summary>
+		/// <remarks>
+		/// Use this class in methods as a return type for easy integration with the accounting
+		/// workflow actions provided by the Logic layer.
+		/// </remarks>
+		public class ActionResult
+		{
+			/// <summary>
+			/// If not null, the journal which was recorded.
+			/// </summary>
+			public J Journal { get; set; }
+
+			/// <summary>
+			/// If not null, the funds transfer event which was recorded.
+			/// </summary>
+			public FundsTransferEvent FundsTransferEvent { get; set; }
+		}
+
+		#endregion
+
 		#region Private classes
 
 		/// <summary>
