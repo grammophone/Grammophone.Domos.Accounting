@@ -88,11 +88,38 @@ namespace Grammophone.Domos.Accounting {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Move withdrawn amount from main account..
+        /// </summary>
+        internal static string MOVE_AMOUNT_FROM_MAIN {
+            get {
+                return ResourceManager.GetString("MOVE_AMOUNT_FROM_MAIN", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Move withdrawn amount to retaining account..
+        /// </summary>
+        internal static string MOVE_AMOUNT_TO_RETAINING {
+            get {
+                return ResourceManager.GetString("MOVE_AMOUNT_TO_RETAINING", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The postings amounts within the journal don&apos;t sum to zero..
         /// </summary>
         internal static string UNBALANCED_POSTINGS {
             get {
                 return ResourceManager.GetString("UNBALANCED_POSTINGS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Withdrawal of funds..
+        /// </summary>
+        internal static string WITHDRAWAL_DESCRIPTION {
+            get {
+                return ResourceManager.GetString("WITHDRAWAL_DESCRIPTION", resourceCulture);
             }
         }
     }

@@ -526,6 +526,86 @@ namespace Grammophone.Domos.Accounting
 			}
 		}
 
+		/// <summary>
+		/// Request withdrawal from a holder of funds.
+		/// </summary>
+		/// <param name="withdrawableFundsHolder">The holder of funds.</param>
+		/// <param name="bankAccountInfo">An account info to be assigned to the request.</param>
+		/// <param name="amount">The amount to withdraw.</param>
+		/// <param name="creditSystemID">The ID of the credit system to transfer funds to.</param>
+		/// <param name="utcDate">The date and time, in UTC.</param>
+		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
+		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <returns>
+		/// Returns the journal which moves the amount to the retaining account of the holder
+		/// and the queuing event of the funds transfer request.
+		/// </returns>
+		public async Task<ActionResult> RequestWithdrawAsync(
+			IWithdrawableFundsHolder<U, A> withdrawableFundsHolder,
+			BankAccountInfo bankAccountInfo,
+			decimal amount,
+			long creditSystemID,
+			DateTime utcDate,
+			string transactionID,
+			string batchID = null)
+		{
+			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
+
+			var encryptedBankAccountInfo = bankAccountInfo.Encrypt(this.DomainContainer);
+
+			return await RequestWithdrawAsync(
+				withdrawableFundsHolder,
+				encryptedBankAccountInfo,
+				amount,
+				creditSystemID,
+				utcDate,
+				transactionID,
+				batchID);
+		}
+
+		/// <summary>
+		/// Request withdrawal from a holder of funds.
+		/// </summary>
+		/// <param name="withdrawableFundsHolder">The holder of funds and owner of bank account.</param>
+		/// <param name="amount">The amount to withdraw.</param>
+		/// <param name="creditSystemID">The ID of the credit system to transfer funds to.</param>
+		/// <param name="utcDate">The date and time, in UTC.</param>
+		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
+		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <returns>
+		/// Returns the journal which moves the amount to the retaining account of the holder
+		/// and the queuing event of the funds transfer request.
+		/// </returns>
+		public async Task<ActionResult> RequestWithdrawAsync(
+			IWithdrawableFundsHolderWithBankAccount<U, A> withdrawableFundsHolder,
+			decimal amount,
+			long creditSystemID,
+			DateTime utcDate,
+			string transactionID,
+			string batchID = null)
+		{
+			if (withdrawableFundsHolder == null) throw new ArgumentNullException(nameof(withdrawableFundsHolder));
+
+			var bankAccountHolder = withdrawableFundsHolder.BankingDetail;
+
+			if (bankAccountHolder == null)
+				throw new ArgumentException(
+					"The BankingDetail of the funds holder is not set.",
+					nameof(withdrawableFundsHolder));
+
+			var encryptedBankAccountInfo = 
+				bankAccountHolder.EncryptedBankAccountInfo.Clone(this.DomainContainer);
+
+			return await RequestWithdrawAsync(
+				withdrawableFundsHolder,
+				encryptedBankAccountInfo,
+				amount,
+				creditSystemID,
+				utcDate,
+				transactionID,
+				batchID);
+		}
+
 		#endregion
 
 		#region Protected methods
@@ -788,6 +868,78 @@ namespace Grammophone.Domos.Accounting
 				throw new AccountingException($"The '{configurationSectionName}' configuration section is not defined.");
 
 			return new UnityContainer().LoadConfiguration(configurationSection);
+		}
+
+		/// <summary>
+		/// Request withdrawal from a holder of funds.
+		/// </summary>
+		/// <param name="withdrawableFundsHolder">The holder of funds.</param>
+		/// <param name="ownEncryptedBankAccountInfo">An account info to be assigned to the request.</param>
+		/// <param name="amount">The amount to withdraw.</param>
+		/// <param name="creditSystemID">The ID of the credit system to transfer funds to.</param>
+		/// <param name="utcDate">The date and time, in UTC.</param>
+		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
+		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <returns>
+		/// Returns the journal which moves the amount to the retaining account of the holder
+		/// and the queuing event of the funds transfer request.
+		/// </returns>
+		private async Task<ActionResult> RequestWithdrawAsync(
+			IWithdrawableFundsHolder<U, A> withdrawableFundsHolder,
+			EncryptedBankAccountInfo ownEncryptedBankAccountInfo,
+			decimal amount,
+			long creditSystemID,
+			DateTime utcDate,
+			string transactionID,
+			string batchID = null)
+		{
+			if (withdrawableFundsHolder == null) throw new ArgumentNullException(nameof(withdrawableFundsHolder));
+			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
+			if (transactionID == null) throw new ArgumentNullException(nameof(transactionID));
+			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("The date is not UTC", nameof(utcDate));
+			if (amount <= 0.0M) throw new ArgumentException("The amount must be positive.", nameof(amount));
+
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				var journal = CreateJournalForEntity(withdrawableFundsHolder);
+				this.DomainContainer.Journals.Add(journal);
+
+				journal.Description = AccountingMessages.WITHDRAWAL_DESCRIPTION;
+
+				var moveFromMainAccountPosting = this.DomainContainer.Postings.Create();
+				journal.Postings.Add(moveFromMainAccountPosting);
+
+				moveFromMainAccountPosting.InheritOwnersFrom(journal);
+				moveFromMainAccountPosting.Amount = -amount;
+				moveFromMainAccountPosting.Account = withdrawableFundsHolder.MainAccount;
+				moveFromMainAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_FROM_MAIN;
+
+				var moveToRetainingAccountPosting = this.DomainContainer.Postings.Create();
+				journal.Postings.Add(moveToRetainingAccountPosting);
+
+				moveToRetainingAccountPosting.InheritOwnersFrom(journal);
+				moveToRetainingAccountPosting.Amount = amount;
+				moveToRetainingAccountPosting.Account = withdrawableFundsHolder.RetainingAccount;
+				moveToRetainingAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_TO_RETAINING;
+
+				EnsureSufficientBalances(journal);
+
+				await ExecuteJournalAsync(journal);
+
+				var fundsTransferQueuingEvent = await CreateFundsTransferRequestAsync(
+					ownEncryptedBankAccountInfo,
+					-amount,
+					creditSystemID,
+					utcDate,
+					transactionID,
+					batchID);
+
+				return new ActionResult
+				{
+					Journal = journal,
+					FundsTransferEvent = fundsTransferQueuingEvent
+				};
+			}
 		}
 
 		#endregion

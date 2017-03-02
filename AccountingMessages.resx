@@ -126,7 +126,16 @@
   <data name="JOURNAL_LINE_ALREADY_EXECUTED" xml:space="preserve">
     <value>The line in the journal has already been executed.</value>
   </data>
+  <data name="MOVE_AMOUNT_FROM_MAIN" xml:space="preserve">
+    <value>Move withdrawn amount from main account.</value>
+  </data>
+  <data name="MOVE_AMOUNT_TO_RETAINING" xml:space="preserve">
+    <value>Move withdrawn amount to retaining account.</value>
+  </data>
   <data name="UNBALANCED_POSTINGS" xml:space="preserve">
     <value>The postings amounts within the journal don't sum to zero.</value>
+  </data>
+  <data name="WITHDRAWAL_DESCRIPTION" xml:space="preserve">
+    <value>Withdrawal of funds.</value>
   </data>
 </root>
