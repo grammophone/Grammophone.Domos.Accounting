@@ -11,14 +11,8 @@ namespace Grammophone.Domos.Accounting
 	/// <summary>
 	/// Thrown when a charge cannot take place because of insufficient account balance.
 	/// </summary>
-	/// <typeparam name="U">
-	/// The type of users, derived from <see cref="User"/>.
-	/// </typeparam>
-	/// <typeparam name="A">The type of accounts, derived from <see cref="Account{U}"/>.</typeparam>
 	[Serializable]
-	public class NegativeBalanceException<U, A> : AccountingException
-		where U : User
-		where A : Account<U>
+	public class NegativeBalanceException : AccountingException
 	{
 		/// <summary>
 		/// Create with default message.
@@ -27,7 +21,7 @@ namespace Grammophone.Domos.Accounting
 		/// The balances, indexed by account, that would result after the 
 		/// execution of the journal, including positive and pathological negative balances.
 		/// </param>
-		public NegativeBalanceException(IReadOnlyDictionary<A, decimal> futureBalancesByAccount)
+		public NegativeBalanceException(IReadOnlyDictionary<Account, decimal> futureBalancesByAccount)
 			: this(
 			futureBalancesByAccount,
 			AccountingMessages.INSUFFICIENT_BALANCE)
@@ -41,7 +35,7 @@ namespace Grammophone.Domos.Accounting
 		/// execution of the journal, including positive and pathological negative balances.
 		/// </param>
 		/// <param name="message">The exception message.</param>
-		public NegativeBalanceException(IReadOnlyDictionary<A, decimal> futureBalancesByAccount, string message)
+		public NegativeBalanceException(IReadOnlyDictionary<Account, decimal> futureBalancesByAccount, string message)
 			: base(message)
 		{
 			if (futureBalancesByAccount == null) throw new ArgumentNullException(nameof(futureBalancesByAccount));
@@ -61,6 +55,6 @@ namespace Grammophone.Domos.Accounting
 		/// The balances, indexed by account, that would result after the 
 		/// execution of the journal, including positive and pathological negative balances.
 		/// </summary>
-		public IReadOnlyDictionary<A, decimal> FutureBalancesByAccount { get; private set; }
+		public IReadOnlyDictionary<Account, decimal> FutureBalancesByAccount { get; private set; }
 	}
 }

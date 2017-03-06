@@ -61,6 +61,33 @@ namespace Grammophone.Domos.Accounting {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Deplete the escrow account upon transfer success..
+        /// </summary>
+        internal static string DEPLETE_ESCROW_ACCOUNT {
+            get {
+                return ResourceManager.GetString("DEPLETE_ESCROW_ACCOUNT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Fund the main account upong transfer success..
+        /// </summary>
+        internal static string FUND_MAIN_ACCOUNT {
+            get {
+                return ResourceManager.GetString("FUND_MAIN_ACCOUNT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Actions for funds transfer event of type {0}..
+        /// </summary>
+        internal static string GENERIC_FUNDS_TRANSFER_JOURNAL {
+            get {
+                return ResourceManager.GetString("GENERIC_FUNDS_TRANSFER_JOURNAL", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to There is at least one account which cannot be charged because of insufficient balance..
         /// </summary>
         internal static string INSUFFICIENT_BALANCE {
@@ -88,20 +115,56 @@ namespace Grammophone.Domos.Accounting {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Move withdrawn amount from main account..
+        ///   Looks up a localized string similar to Move refunded amount from escrow account..
         /// </summary>
-        internal static string MOVE_AMOUNT_FROM_MAIN {
+        internal static string MOVE_AMOUNT_FROM_ESCROW_ACCOUNT {
             get {
-                return ResourceManager.GetString("MOVE_AMOUNT_FROM_MAIN", resourceCulture);
+                return ResourceManager.GetString("MOVE_AMOUNT_FROM_ESCROW_ACCOUNT", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Move withdrawn amount to retaining account..
+        ///   Looks up a localized string similar to Move withdrawn amount from main account..
         /// </summary>
-        internal static string MOVE_AMOUNT_TO_RETAINING {
+        internal static string MOVE_AMOUNT_FROM_MAIN_ACCOUNT {
             get {
-                return ResourceManager.GetString("MOVE_AMOUNT_TO_RETAINING", resourceCulture);
+                return ResourceManager.GetString("MOVE_AMOUNT_FROM_MAIN_ACCOUNT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Move withdrawn amount to escrow account..
+        /// </summary>
+        internal static string MOVE_AMOUNT_TO_ESCROW_ACCOUNT {
+            get {
+                return ResourceManager.GetString("MOVE_AMOUNT_TO_ESCROW_ACCOUNT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Move refunded amount to main account..
+        /// </summary>
+        internal static string MOVE_AMOUNT_TO_MAIN_ACCOUNT {
+            get {
+                return ResourceManager.GetString("MOVE_AMOUNT_TO_MAIN_ACCOUNT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Refund failed transfer..
+        /// </summary>
+        internal static string REFUND_FAILED_TRANSFER {
+            get {
+                return ResourceManager.GetString("REFUND_FAILED_TRANSFER", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The funds transfer has succeeded..
+        /// </summary>
+        internal static string TRANSFER_SUCCEEDED {
+            get {
+                return ResourceManager.GetString("TRANSFER_SUCCEEDED", resourceCulture);
             }
         }
         
@@ -115,11 +178,11 @@ namespace Grammophone.Domos.Accounting {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Withdrawal of funds..
+        ///   Looks up a localized string similar to Move withdrawed funds to escrow..
         /// </summary>
-        internal static string WITHDRAWAL_DESCRIPTION {
+        internal static string WITHDRAWAL_ESCROW_DESCRIPTION {
             get {
-                return ResourceManager.GetString("WITHDRAWAL_DESCRIPTION", resourceCulture);
+                return ResourceManager.GetString("WITHDRAWAL_ESCROW_DESCRIPTION", resourceCulture);
             }
         }
     }

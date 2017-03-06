@@ -29,21 +29,19 @@ namespace Grammophone.Domos.Accounting
 	/// <typeparam name="BST">
 	/// The base type of state transitions, derived from <see cref="StateTransition{U}"/>.
 	/// </typeparam>
-	/// <typeparam name="A">The type of accounts, derived from <see cref="Account{U}"/>.</typeparam>
-	/// <typeparam name="P">The type of the postings, derived from <see cref="Posting{U, A}"/>.</typeparam>
-	/// <typeparam name="R">The type of remittances, derived from <see cref="Remittance{U, A}"/>.</typeparam>
+	/// <typeparam name="P">The type of the postings, derived from <see cref="Posting{U}"/>.</typeparam>
+	/// <typeparam name="R">The type of remittances, derived from <see cref="Remittance{U}"/>.</typeparam>
 	/// <typeparam name="J">
-	/// The type of accounting journals, derived from <see cref="Journal{U, ST, A, P, R}"/>.
+	/// The type of accounting journals, derived from <see cref="Journal{U, ST, P, R}"/>.
 	/// </typeparam>
 	/// <typeparam name="D">The type of domain container for entities.</typeparam>
-	public class AccountingSession<U, BST, A, P, R, J, D> : IDisposable
+	public class AccountingSession<U, BST, P, R, J, D> : IDisposable
 		where U : User
 		where BST : StateTransition<U>
-		where A : Account<U>
-		where P : Posting<U, A>
-		where R : Remittance<U, A>
-		where J : Journal<U, BST, A, P, R>
-		where D : IDomosDomainContainer<U, BST, A, P, R, J>
+		where P : Posting<U>
+		where R : Remittance<U>
+		where J : Journal<U, BST, P, R>
+		where D : IDomosDomainContainer<U, BST, P, R, J>
 	{
 		#region Constants
 
@@ -66,7 +64,8 @@ namespace Grammophone.Domos.Accounting
 		public class ActionResult
 		{
 			/// <summary>
-			/// If not null, the journal which was recorded.
+			/// If not null, the journal which was executed.
+			/// Do not append postings or remittances to it.
 			/// </summary>
 			public J Journal { get; set; }
 
@@ -362,17 +361,27 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		/// <param name="bankAccountInfo">The bank account info to be encrypted and recorded.</param>
 		/// <param name="amount">If positive, the amount to be deposited to the account, else withdrawed.</param>
-		/// <param name="creditSystemID">The ID of the credit system.</param>
+		/// <param name="creditSystem">The the credit system.</param>
 		/// <param name="utcDate">The time instant in UTC.</param>
+		/// <param name="mainAccount">The main account being charged.</param>
+		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
+		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
-		/// <returns>Returns the event recording the queueing of the request.</returns>
-		public async Task<FundsTransferEvent> CreateFundsTransferRequestAsync(
+		/// <returns>
+		/// Returns the queuing event of the funds transfer request
+		/// and optionally the journal which moves the amount to the retaining account of the holder,
+		/// if the <paramref name="amount"/> is positive.
+		/// </returns>
+		public async Task<ActionResult> CreateFundsTransferRequestAsync(
 			BankAccountInfo bankAccountInfo,
 			decimal amount,
-			long creditSystemID,
+			CreditSystem creditSystem,
 			DateTime utcDate,
 			string transactionID,
+			Account mainAccount,
+			Account escrowAccount,
+			Action<J> actionToAppendJournal,
 			string batchID = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
@@ -382,9 +391,12 @@ namespace Grammophone.Domos.Accounting
 			return await CreateFundsTransferRequestAsync(
 				ownEncryptedBankAccountInfo,
 				amount,
-				creditSystemID,
+				creditSystem,
 				utcDate,
 				transactionID,
+				mainAccount,
+				escrowAccount,
+				actionToAppendJournal,
 				batchID);
 		}
 
@@ -395,17 +407,27 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		/// <param name="bankAccountHolder">An entity holding a bank account.</param>
 		/// <param name="amount">If positive, the amount to be deposited to the account, else withdrawed.</param>
-		/// <param name="creditSystemID">The ID of the credit system.</param>
+		/// <param name="creditSystem">The credit system.</param>
 		/// <param name="utcDate">The time instant in UTC.</param>
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
+		/// <param name="mainAccount">The main account being charged.</param>
+		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
+		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
-		/// <returns>Returns the event recording the queueing of the request.</returns>
-		public async Task<FundsTransferEvent> CreateFundsTransferRequestAsync(
+		/// <returns>
+		/// Returns the queuing event of the funds transfer request
+		/// and optionally the journal which moves the amount to the retaining account of the holder,
+		/// if the <paramref name="amount"/> is positive.
+		/// </returns>
+		public async Task<ActionResult> CreateFundsTransferRequestAsync(
 			IBankAccountHolder bankAccountHolder,
 			decimal amount,
-			long creditSystemID,
+			CreditSystem creditSystem,
 			DateTime utcDate,
 			string transactionID,
+			Account mainAccount,
+			Account escrowAccount,
+			Action<J> actionToAppendJournal,
 			string batchID = null)
 		{
 			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
@@ -415,9 +437,12 @@ namespace Grammophone.Domos.Accounting
 			return await CreateFundsTransferRequestAsync(
 				ownEncryptedBankAccountInfo,
 				amount,
-				creditSystemID,
+				creditSystem,
 				utcDate,
 				transactionID,
+				mainAccount,
+				escrowAccount,
+				actionToAppendJournal,
 				batchID);
 		}
 
@@ -427,20 +452,23 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="request">The funds tranfer request.</param>
 		/// <param name="utcDate">The event time, in UTC.</param>
 		/// <param name="eventType">The type of the event.</param>
+		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
 		/// <param name="responseCode">The optinal response code of the event.</param>
 		/// <param name="traceCode">The optional trace code for the event.</param>
 		/// <param name="comments">Optional comments.</param>
 		/// <returns>
-		/// Returns the created event.
+		/// Returns an action holding the created event
+		/// and optionally any journal executed because of the event.
 		/// </returns>
 		/// <exception cref="AccountingException">
 		/// Thrown when the <paramref name="request"/> already has an event of the
 		/// given <paramref name="eventType"/>.
 		/// </exception>
-		public async Task<FundsTransferEvent> AddFundsTransferEventAsync(
+		public async Task<ActionResult> AddFundsTransferEventAsync(
 			FundsTransferRequest request,
 			DateTime utcDate,
 			FundsTransferEventType eventType,
+			Action<J> actionToAppendJournal = null,
 			string responseCode = null,
 			string traceCode = null,
 			string comments = null)
@@ -469,8 +497,31 @@ namespace Grammophone.Domos.Accounting
 
 				transferEvent.Request = request;
 
+				J journal = null;
+
 				switch (eventType)
 				{
+					case FundsTransferEventType.Queued:
+						if (request.Amount > 0.0M)
+						{
+							journal = CreateJournalForFundsTransferEvent(transferEvent);
+
+							journal.Description = AccountingMessages.WITHDRAWAL_ESCROW_DESCRIPTION;
+
+							P moveFromMainAccountPosting = CreatePostingForJournal(journal);
+
+							moveFromMainAccountPosting.Amount = -request.Amount;
+							moveFromMainAccountPosting.Account = request.MainAccount;
+							moveFromMainAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_FROM_MAIN_ACCOUNT;
+
+							P moveToEscrowAccountPosting = CreatePostingForJournal(journal);
+
+							moveToEscrowAccountPosting.Amount = request.Amount;
+							moveToEscrowAccountPosting.Account = request.EscrowAccount;
+							moveToEscrowAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_TO_ESCROW_ACCOUNT;
+						}
+						break;
+
 					case FundsTransferEventType.Submitted:
 					case FundsTransferEventType.Accepted:
 						request.State = FundsTransferState.Submitted;
@@ -478,18 +529,80 @@ namespace Grammophone.Domos.Accounting
 
 					case FundsTransferEventType.Failed:
 						request.State = FundsTransferState.Failed;
+
+						if (request.Amount > 0.0M)
+						{
+							journal = CreateJournalForFundsTransferEvent(transferEvent);
+
+							journal.Description = AccountingMessages.REFUND_FAILED_TRANSFER;
+
+							P moveFromEscrowAccountPosting = CreatePostingForJournal(journal);
+
+							moveFromEscrowAccountPosting.Amount = -request.Amount;
+							moveFromEscrowAccountPosting.Account = request.EscrowAccount;
+							moveFromEscrowAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_FROM_ESCROW_ACCOUNT;
+
+							P moveToMainAccountPosting = CreatePostingForJournal(journal);
+
+							moveToMainAccountPosting.Amount = request.Amount;
+							moveToMainAccountPosting.Account = request.MainAccount;
+							moveToMainAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_TO_MAIN_ACCOUNT;
+						}
+
 						break;
 
 					case FundsTransferEventType.Succeeded:
 						request.State = FundsTransferState.Succeeded;
+
+						journal = CreateJournalForFundsTransferEvent(transferEvent);
+
+						journal.Description = AccountingMessages.TRANSFER_SUCCEEDED;
+
+						{
+							var remittance = CreateRemittanceForJournal(journal, request.CreditSystemID);
+
+							remittance.Amount = -request.Amount;
+
+							if (request.Amount > 0.0M)
+							{
+								remittance.Account = request.EscrowAccount;
+								remittance.Description = AccountingMessages.DEPLETE_ESCROW_ACCOUNT;
+							}
+							else
+							{
+								remittance.Account = request.MainAccount;
+								remittance.Description = AccountingMessages.FUND_MAIN_ACCOUNT;
+							}
+						}
 						break;
 				}
 
 				this.DomainContainer.FundsTransferEvents.Add(transferEvent);
 
+				if (actionToAppendJournal != null)
+				{
+					if (journal == null)
+					{
+						journal = CreateJournalForFundsTransferEvent(transferEvent);
+					}
+
+					actionToAppendJournal(journal);
+				}
+
+				if (journal != null)
+				{
+					EnsureSufficientBalances(journal);
+
+					await ExecuteJournalAsync(journal);
+				}
+
 				await transaction.CommitAsync();
 
-				return transferEvent;
+				return new ActionResult
+				{
+					FundsTransferEvent = transferEvent,
+					Journal = journal
+				};
 			}
 		}
 
@@ -497,12 +610,12 @@ namespace Grammophone.Domos.Accounting
 		/// From a set of funds transfer requests, filter those which are pending
 		/// a response.
 		/// </summary>
-		/// <param name="creditSystemID">The credit system of the requests.</param>
+		/// <param name="creditSystem">The credit system of the requests.</param>
 		/// <param name="fundsTransferRequestsQuery">The set of requests.</param>
 		/// <param name="includeSubmitted">In the results, include requests which are already submitted.</param>
 		/// <returns>Returns the set of filtered requests.</returns>
 		public IQueryable<FundsTransferRequest> FilterPendingFundsTransferRequests(
-			long creditSystemID,
+			CreditSystem creditSystem,
 			IQueryable<FundsTransferRequest> fundsTransferRequestsQuery,
 			bool includeSubmitted = false)
 		{
@@ -513,7 +626,7 @@ namespace Grammophone.Domos.Accounting
 				return from ftr in fundsTransferRequestsQuery
 							 let lastEventType = ftr.Events.OrderByDescending(e => e.Date).Select(e => e.Type).FirstOrDefault()
 							 where lastEventType == FundsTransferEventType.Queued || lastEventType == FundsTransferEventType.Submitted
-							 && ftr.CreditSystemID == creditSystemID
+							 && ftr.CreditSystemID == creditSystem.ID
 							 select ftr;
 			}
 			else
@@ -521,7 +634,7 @@ namespace Grammophone.Domos.Accounting
 				return from ftr in fundsTransferRequestsQuery
 							 let lastEventType = ftr.Events.OrderByDescending(e => e.Date).Select(e => e.Type).FirstOrDefault()
 							 where lastEventType == FundsTransferEventType.Queued
-							 && ftr.CreditSystemID == creditSystemID
+							 && ftr.CreditSystemID == creditSystem.ID
 							 select ftr;
 			}
 		}
@@ -529,80 +642,88 @@ namespace Grammophone.Domos.Accounting
 		/// <summary>
 		/// Request withdrawal from a holder of funds.
 		/// </summary>
-		/// <param name="withdrawableFundsHolder">The holder of funds.</param>
+		/// <param name="transferableFundsHolder">The holder of funds.</param>
 		/// <param name="bankAccountInfo">An account info to be assigned to the request.</param>
 		/// <param name="amount">The amount to withdraw.</param>
-		/// <param name="creditSystemID">The ID of the credit system to transfer funds to.</param>
+		/// <param name="creditSystem">The credit system to transfer funds to.</param>
 		/// <param name="utcDate">The date and time, in UTC.</param>
 		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
+		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <returns>
-		/// Returns the journal which moves the amount to the retaining account of the holder
-		/// and the queuing event of the funds transfer request.
+		/// Returns the queuing event of the funds transfer request
+		/// and optionally the journal which moves the amount to the retaining account of the holder,
+		/// if the <paramref name="amount"/> is positive.
 		/// </returns>
-		public async Task<ActionResult> RequestWithdrawAsync(
-			IWithdrawableFundsHolder<U, A> withdrawableFundsHolder,
+		public async Task<ActionResult> CreateFundsTransferRequestAsync(
+			ITransferableFundsHolder transferableFundsHolder,
 			BankAccountInfo bankAccountInfo,
 			decimal amount,
-			long creditSystemID,
+			CreditSystem creditSystem,
 			DateTime utcDate,
 			string transactionID,
+			Action<J> actionToAppendJournal,
 			string batchID = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 
 			var encryptedBankAccountInfo = bankAccountInfo.Encrypt(this.DomainContainer);
 
-			return await RequestWithdrawAsync(
-				withdrawableFundsHolder,
+			return await CreateFundsTransferRequestAsync(
+				transferableFundsHolder,
 				encryptedBankAccountInfo,
 				amount,
-				creditSystemID,
+				creditSystem,
 				utcDate,
 				transactionID,
+				actionToAppendJournal,
 				batchID);
 		}
 
 		/// <summary>
 		/// Request withdrawal from a holder of funds.
 		/// </summary>
-		/// <param name="withdrawableFundsHolder">The holder of funds and owner of bank account.</param>
+		/// <param name="transferableFundsHolder">The holder of funds and owner of bank account.</param>
 		/// <param name="amount">The amount to withdraw.</param>
-		/// <param name="creditSystemID">The ID of the credit system to transfer funds to.</param>
+		/// <param name="creditSystem">The credit system to transfer funds to.</param>
 		/// <param name="utcDate">The date and time, in UTC.</param>
 		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
+		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <returns>
-		/// Returns the journal which moves the amount to the retaining account of the holder
-		/// and the queuing event of the funds transfer request.
+		/// Returns the queuing event of the funds transfer request
+		/// and optionally the journal which moves the amount to the retaining account of the holder,
+		/// if the <paramref name="amount"/> is positive.
 		/// </returns>
-		public async Task<ActionResult> RequestWithdrawAsync(
-			IWithdrawableFundsHolderWithBankAccount<U, A> withdrawableFundsHolder,
+		public async Task<ActionResult> CreateFundsTransferRequestAsync(
+			ITransferableFundsHolderWithBankAccount transferableFundsHolder,
 			decimal amount,
-			long creditSystemID,
+			CreditSystem creditSystem,
 			DateTime utcDate,
 			string transactionID,
+			Action<J> actionToAppendJournal,
 			string batchID = null)
 		{
-			if (withdrawableFundsHolder == null) throw new ArgumentNullException(nameof(withdrawableFundsHolder));
+			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 
-			var bankAccountHolder = withdrawableFundsHolder.BankingDetail;
+			var bankAccountHolder = transferableFundsHolder.BankingDetail;
 
 			if (bankAccountHolder == null)
 				throw new ArgumentException(
 					"The BankingDetail of the funds holder is not set.",
-					nameof(withdrawableFundsHolder));
+					nameof(transferableFundsHolder));
 
 			var encryptedBankAccountInfo = 
 				bankAccountHolder.EncryptedBankAccountInfo.Clone(this.DomainContainer);
 
-			return await RequestWithdrawAsync(
-				withdrawableFundsHolder,
+			return await CreateFundsTransferRequestAsync(
+				transferableFundsHolder,
 				encryptedBankAccountInfo,
 				amount,
-				creditSystemID,
+				creditSystem,
 				utcDate,
 				transactionID,
+				actionToAppendJournal,
 				batchID);
 		}
 
@@ -664,7 +785,7 @@ namespace Grammophone.Domos.Accounting
 		/// <summary>
 		/// Amend account balances according to a collection of journal lines.
 		/// </summary>
-		protected void AmendAccounts(IEnumerable<JournalLine<U, A>> journalLines)
+		protected void AmendAccounts(IEnumerable<JournalLine<U>> journalLines)
 		{
 			if (journalLines == null) throw new ArgumentNullException(nameof(journalLines));
 
@@ -682,7 +803,7 @@ namespace Grammophone.Domos.Accounting
 		/// after the execution of the journal.
 		/// </summary>
 		/// <param name="journal">The journal to test.</param>
-		/// <exception cref="NegativeBalanceException{U, A}">
+		/// <exception cref="NegativeBalanceException">
 		/// Thrown when at least one account balance would turn to negative
 		/// if the journal would be executed.
 		/// </exception>
@@ -690,10 +811,10 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (journal == null) throw new ArgumentNullException(nameof(journal));
 
-			IReadOnlyDictionary<A, decimal> futureBalancesByAccount = PredictAccountBalances(journal);
+			IReadOnlyDictionary<Account, decimal> futureBalancesByAccount = PredictAccountBalances(journal);
 
 			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M))
-				throw new NegativeBalanceException<U, A>(futureBalancesByAccount);
+				throw new NegativeBalanceException(futureBalancesByAccount);
 		}
 
 		/// <summary>
@@ -704,19 +825,19 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="accountPredicate">
 		/// A predicate to select which accounts are tested for negative balance.
 		/// </param>
-		/// <exception cref="NegativeBalanceException{U, A}">
+		/// <exception cref="NegativeBalanceException">
 		/// Thrown when at least one account balance would turn to negative
 		/// if the journal would be executed.
 		/// </exception>
-		protected void EnsureSufficientBalances(J journal, Func<A, bool> accountPredicate)
+		protected void EnsureSufficientBalances(J journal, Func<Account, bool> accountPredicate)
 		{
 			if (journal == null) throw new ArgumentNullException(nameof(journal));
 			if (accountPredicate == null) throw new ArgumentNullException(nameof(accountPredicate));
 
-			IReadOnlyDictionary<A, decimal> futureBalancesByAccount = PredictAccountBalances(journal);
+			IReadOnlyDictionary<Account, decimal> futureBalancesByAccount = PredictAccountBalances(journal);
 
 			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M && accountPredicate(entry.Key)))
-				throw new NegativeBalanceException<U, A>(futureBalancesByAccount);
+				throw new NegativeBalanceException(futureBalancesByAccount);
 		}
 
 		/// <summary>
@@ -724,11 +845,11 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		/// <param name="journal">The prospective journal.</param>
 		/// <returns>Returns a dictionary having the accounts as keys and the predicted balances as values.</returns>
-		protected IReadOnlyDictionary<A, decimal> PredictAccountBalances(J journal)
+		protected IReadOnlyDictionary<Account, decimal> PredictAccountBalances(J journal)
 		{
 			if (journal == null) throw new ArgumentNullException(nameof(journal));
 
-			var journalLines = new List<JournalLine<U, A>>(journal.Remittances.Count + journal.Postings.Count);
+			var journalLines = new List<JournalLine<U>>(journal.Remittances.Count + journal.Postings.Count);
 
 			journalLines.AddRange(journal.Remittances);
 			journalLines.AddRange(journal.Postings);
@@ -758,33 +879,84 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		/// <param name="entity">The entity being referred, for example, a stateful object.</param>
 		/// <returns>
-		/// Returns a created but not persisted journal.
+		/// Returns a created but not persisted empty journal.
 		/// </returns>
-		protected J CreateJournalForEntity(object entity)
+		protected virtual J CreateJournalForEntity(object entity)
 		{
 			if (entity == null) throw new ArgumentNullException(nameof(entity));
 
 			var journal = this.DomainContainer.Journals.Create();
+			this.DomainContainer.Journals.Add(journal);
 
 			journal.OwningUsers.Add(this.Agent);
 
-			var userEntity = entity as IUserTrackingEntity<U>;
-
-			if (userEntity != null)
-			{
-				journal.InheritOwnerFrom(userEntity);
-			}
-			else
-			{
-				var userGroupEntity = entity as IUserGroupTrackingEntity<U>;
-
-				if (userGroupEntity != null)
-				{
-					journal.InheritOwnersFrom(userGroupEntity);
-				}
-			}
+			journal.InheritOwnersFrom(entity);
 
 			return journal;
+		}
+
+		/// <summary>
+		/// Create a journal to refer to a <see cref="FundsTransferEvent"/> and
+		/// inherit any appropriate owners.
+		/// </summary>
+		/// <param name="transferEvent">The funds transfer event.</param>
+		/// <returns>
+		/// Returns a created but not persisted empty journal.
+		/// </returns>
+		protected virtual J CreateJournalForFundsTransferEvent(FundsTransferEvent transferEvent)
+		{
+			if (transferEvent == null) throw new ArgumentNullException(nameof(transferEvent));
+
+			var request = transferEvent.Request;
+
+			var journal = this.DomainContainer.Journals.Create();
+			this.DomainContainer.Journals.Add(journal);
+
+			journal.OwningUsers.Add(this.Agent);
+
+			journal.InheritOwnersFrom(request.MainAccount);
+			journal.InheritOwnersFrom(request.EscrowAccount);
+
+			journal.Description = String.Format(AccountingMessages.GENERIC_FUNDS_TRANSFER_JOURNAL, transferEvent.Type);
+
+			return journal;
+		}
+
+		/// <summary>
+		/// Create a posting suitable for a journal.
+		/// </summary>
+		/// <param name="journal">The journal.</param>
+		/// <returns>Returns the posting.</returns>
+		protected virtual P CreatePostingForJournal(J journal)
+		{
+			if (journal == null) throw new ArgumentNullException(nameof(journal));
+
+			var posting = this.DomainContainer.Postings.Create();
+			journal.Postings.Add(posting);
+
+			posting.InheritOwnersFrom(journal);
+
+			return posting;
+		}
+
+		/// <summary>
+		/// Create a remittance suitable for a journal.
+		/// </summary>
+		/// <param name="journal">The journal.</param>
+		/// <param name="creditSystemID">The ID of the credit system to which the remittance refers.</param>
+		/// <returns>Returns the remittance.</returns>
+		protected virtual R CreateRemittanceForJournal(J journal, long creditSystemID)
+		{
+			if (journal == null) throw new ArgumentNullException(nameof(journal));
+
+			var remittance = this.DomainContainer.Remittances.Create();
+			journal.Remittances.Add(remittance);
+
+			remittance.InheritOwnersFrom(journal);
+
+			remittance.CreditSystemID = creditSystemID;
+
+			return remittance;
 		}
 
 		#endregion
@@ -814,22 +986,35 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		/// <param name="ownEncryptedBankAccountInfo">An account info to be assigned to the request.</param>
 		/// <param name="amount">The amount of the transfer, positive for deposit, negative for withdrawal.</param>
-		/// <param name="creditSystemID">The ID of the credit system.</param>
+		/// <param name="creditSystem">The credit system.</param>
 		/// <param name="utcDate">The time in UTC.</param>
 		/// <param name="transactionID">The ID of the transaction.</param>
+		/// <param name="mainAccount">The main account being charged.</param>
+		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
+		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional ID of the batch.</param>
-		/// <returns>Returns the event recording the queueing of the request.</returns>
-		private async Task<FundsTransferEvent> CreateFundsTransferRequestAsync(
+		/// <returns>
+		/// Returns the queuing event of the funds transfer request
+		/// and optionally the journal which moves the amount to the retaining account of the holder,
+		/// if the <paramref name="amount"/> is positive.
+		/// </returns>
+		private async Task<ActionResult> CreateFundsTransferRequestAsync(
 			EncryptedBankAccountInfo ownEncryptedBankAccountInfo,
 			decimal amount,
-			long creditSystemID,
+			CreditSystem creditSystem,
 			DateTime utcDate,
 			string transactionID,
+			Account mainAccount,
+			Account escrowAccount,
+			Action<J> actionToAppendJournal,
 			string batchID = null)
 		{
 			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
-			if (transactionID == null) throw new ArgumentNullException(nameof(transactionID));
 			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
+			if (transactionID == null) throw new ArgumentNullException(nameof(transactionID));
+			if (mainAccount == null) throw new ArgumentNullException(nameof(mainAccount));
+			if (escrowAccount == null) throw new ArgumentNullException(nameof(escrowAccount));
+			if (amount == 0.0M) throw new ArgumentException("The amount must not be zero.", nameof(amount));
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
@@ -839,12 +1024,18 @@ namespace Grammophone.Domos.Accounting
 				request.State = FundsTransferState.Pending;
 				request.TransactionID = transactionID;
 				request.BatchID = batchID;
-				request.CreditSystemID = creditSystemID;
+				request.CreditSystem = creditSystem;
+				request.MainAccount = mainAccount;
+				request.EscrowAccount = escrowAccount;
 				request.EncryptedBankAccountInfo = ownEncryptedBankAccountInfo;
 
 				this.DomainContainer.FundsTransferRequests.Add(request);
 
-				var queueEvent = await AddFundsTransferEventAsync(request, utcDate, FundsTransferEventType.Queued);
+				var queueEvent = await AddFundsTransferEventAsync(
+					request, 
+					utcDate, 
+					FundsTransferEventType.Queued,
+					actionToAppendJournal);
 
 				await transaction.CommitAsync();
 
@@ -871,75 +1062,43 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
-		/// Request withdrawal from a holder of funds.
+		/// Create a funds transfer request.
 		/// </summary>
-		/// <param name="withdrawableFundsHolder">The holder of funds.</param>
+		/// <param name="transferableFundsHolder">The holder of funds.</param>
 		/// <param name="ownEncryptedBankAccountInfo">An account info to be assigned to the request.</param>
-		/// <param name="amount">The amount to withdraw.</param>
-		/// <param name="creditSystemID">The ID of the credit system to transfer funds to.</param>
+		/// <param name="amount">The amount of the transfer, positive for deposit, negative for withdrawal.</param>
+		/// <param name="creditSystem">The credit system to transfer funds to or from.</param>
 		/// <param name="utcDate">The date and time, in UTC.</param>
 		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
+		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <returns>
-		/// Returns the journal which moves the amount to the retaining account of the holder
-		/// and the queuing event of the funds transfer request.
+		/// Returns the queuing event of the funds transfer request
+		/// and optionally the journal which moves the amount to the retaining account of the holder,
+		/// if the <paramref name="amount"/> is positive.
 		/// </returns>
-		private async Task<ActionResult> RequestWithdrawAsync(
-			IWithdrawableFundsHolder<U, A> withdrawableFundsHolder,
+		private async Task<ActionResult> CreateFundsTransferRequestAsync(
+			ITransferableFundsHolder transferableFundsHolder,
 			EncryptedBankAccountInfo ownEncryptedBankAccountInfo,
 			decimal amount,
-			long creditSystemID,
+			CreditSystem creditSystem,
 			DateTime utcDate,
 			string transactionID,
+			Action<J> actionToAppendJournal,
 			string batchID = null)
 		{
-			if (withdrawableFundsHolder == null) throw new ArgumentNullException(nameof(withdrawableFundsHolder));
-			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
-			if (transactionID == null) throw new ArgumentNullException(nameof(transactionID));
-			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("The date is not UTC", nameof(utcDate));
-			if (amount <= 0.0M) throw new ArgumentException("The amount must be positive.", nameof(amount));
+			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 
-			using (var transaction = this.DomainContainer.BeginTransaction())
-			{
-				var journal = CreateJournalForEntity(withdrawableFundsHolder);
-				this.DomainContainer.Journals.Add(journal);
-
-				journal.Description = AccountingMessages.WITHDRAWAL_DESCRIPTION;
-
-				var moveFromMainAccountPosting = this.DomainContainer.Postings.Create();
-				journal.Postings.Add(moveFromMainAccountPosting);
-
-				moveFromMainAccountPosting.InheritOwnersFrom(journal);
-				moveFromMainAccountPosting.Amount = -amount;
-				moveFromMainAccountPosting.Account = withdrawableFundsHolder.MainAccount;
-				moveFromMainAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_FROM_MAIN;
-
-				var moveToRetainingAccountPosting = this.DomainContainer.Postings.Create();
-				journal.Postings.Add(moveToRetainingAccountPosting);
-
-				moveToRetainingAccountPosting.InheritOwnersFrom(journal);
-				moveToRetainingAccountPosting.Amount = amount;
-				moveToRetainingAccountPosting.Account = withdrawableFundsHolder.RetainingAccount;
-				moveToRetainingAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_TO_RETAINING;
-
-				EnsureSufficientBalances(journal);
-
-				await ExecuteJournalAsync(journal);
-
-				var fundsTransferQueuingEvent = await CreateFundsTransferRequestAsync(
-					ownEncryptedBankAccountInfo,
-					-amount,
-					creditSystemID,
-					utcDate,
-					transactionID,
-					batchID);
-
-				return new ActionResult
-				{
-					Journal = journal,
-					FundsTransferEvent = fundsTransferQueuingEvent
-				};
-			}
+			return await CreateFundsTransferRequestAsync(
+				ownEncryptedBankAccountInfo,
+				amount,
+				creditSystem,
+				utcDate,
+				transactionID,
+				transferableFundsHolder.MainAccount,
+				transferableFundsHolder.EscrowAccount,
+				actionToAppendJournal,
+				batchID);
 		}
 
 		#endregion

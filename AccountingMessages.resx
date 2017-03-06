@@ -117,6 +117,15 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="DEPLETE_ESCROW_ACCOUNT" xml:space="preserve">
+    <value>Deplete the escrow account upon transfer success.</value>
+  </data>
+  <data name="FUND_MAIN_ACCOUNT" xml:space="preserve">
+    <value>Fund the main account upong transfer success.</value>
+  </data>
+  <data name="GENERIC_FUNDS_TRANSFER_JOURNAL" xml:space="preserve">
+    <value>Actions for funds transfer event of type {0}.</value>
+  </data>
   <data name="INSUFFICIENT_BALANCE" xml:space="preserve">
     <value>There is at least one account which cannot be charged because of insufficient balance.</value>
   </data>
@@ -126,16 +135,28 @@
   <data name="JOURNAL_LINE_ALREADY_EXECUTED" xml:space="preserve">
     <value>The line in the journal has already been executed.</value>
   </data>
-  <data name="MOVE_AMOUNT_FROM_MAIN" xml:space="preserve">
+  <data name="MOVE_AMOUNT_FROM_ESCROW_ACCOUNT" xml:space="preserve">
+    <value>Move refunded amount from escrow account.</value>
+  </data>
+  <data name="MOVE_AMOUNT_FROM_MAIN_ACCOUNT" xml:space="preserve">
     <value>Move withdrawn amount from main account.</value>
   </data>
-  <data name="MOVE_AMOUNT_TO_RETAINING" xml:space="preserve">
-    <value>Move withdrawn amount to retaining account.</value>
+  <data name="MOVE_AMOUNT_TO_ESCROW_ACCOUNT" xml:space="preserve">
+    <value>Move withdrawn amount to escrow account.</value>
+  </data>
+  <data name="MOVE_AMOUNT_TO_MAIN_ACCOUNT" xml:space="preserve">
+    <value>Move refunded amount to main account.</value>
+  </data>
+  <data name="REFUND_FAILED_TRANSFER" xml:space="preserve">
+    <value>Refund failed transfer.</value>
+  </data>
+  <data name="TRANSFER_SUCCEEDED" xml:space="preserve">
+    <value>The funds transfer has succeeded.</value>
   </data>
   <data name="UNBALANCED_POSTINGS" xml:space="preserve">
     <value>The postings amounts within the journal don't sum to zero.</value>
   </data>
-  <data name="WITHDRAWAL_DESCRIPTION" xml:space="preserve">
-    <value>Withdrawal of funds.</value>
+  <data name="WITHDRAWAL_ESCROW_DESCRIPTION" xml:space="preserve">
+    <value>Move withdrawed funds to escrow.</value>
   </data>
 </root>
