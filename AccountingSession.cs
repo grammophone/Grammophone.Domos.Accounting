@@ -366,7 +366,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
-		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
+		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
@@ -381,7 +381,7 @@ namespace Grammophone.Domos.Accounting
 			string transactionID,
 			Account mainAccount,
 			Account escrowAccount,
-			Action<J> actionToAppendJournal,
+			Func<J, Task> asyncJournalAppendAction,
 			string batchID = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
@@ -396,7 +396,7 @@ namespace Grammophone.Domos.Accounting
 				transactionID,
 				mainAccount,
 				escrowAccount,
-				actionToAppendJournal,
+				asyncJournalAppendAction,
 				batchID);
 		}
 
@@ -412,7 +412,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
-		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
+		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
@@ -427,7 +427,7 @@ namespace Grammophone.Domos.Accounting
 			string transactionID,
 			Account mainAccount,
 			Account escrowAccount,
-			Action<J> actionToAppendJournal,
+			Func<J, Task> asyncJournalAppendAction,
 			string batchID = null)
 		{
 			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
@@ -442,7 +442,136 @@ namespace Grammophone.Domos.Accounting
 				transactionID,
 				mainAccount,
 				escrowAccount,
-				actionToAppendJournal,
+				asyncJournalAppendAction,
+				batchID);
+		}
+
+		/// <summary>
+		/// Request withdrawal from a holder of funds.
+		/// </summary>
+		/// <param name="transferableFundsHolder">The holder of funds.</param>
+		/// <param name="bankAccountInfo">An account info to be assigned to the request.</param>
+		/// <param name="amount">The amount to withdraw.</param>
+		/// <param name="creditSystem">The credit system to transfer funds to.</param>
+		/// <param name="utcDate">The date and time, in UTC.</param>
+		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
+		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
+		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <returns>
+		/// Returns the queuing event of the funds transfer request
+		/// and optionally the journal which moves the amount to the retaining account of the holder,
+		/// if the <paramref name="amount"/> is positive.
+		/// </returns>
+		public async Task<ActionResult> CreateFundsTransferRequestAsync(
+			ITransferableFundsHolder transferableFundsHolder,
+			BankAccountInfo bankAccountInfo,
+			decimal amount,
+			CreditSystem creditSystem,
+			DateTime utcDate,
+			string transactionID,
+			Func<J, Task> asyncJournalAppendAction,
+			string batchID = null)
+		{
+			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
+
+			var encryptedBankAccountInfo = bankAccountInfo.Encrypt(this.DomainContainer);
+
+			return await CreateFundsTransferRequestAsync(
+				transferableFundsHolder,
+				encryptedBankAccountInfo,
+				amount,
+				creditSystem,
+				utcDate,
+				transactionID,
+				asyncJournalAppendAction,
+				batchID);
+		}
+
+		/// <summary>
+		/// Request withdrawal from a holder of funds.
+		/// </summary>
+		/// <param name="transferableFundsHolder">The holder of funds.</param>
+		/// <param name="bankAccountHolder">A holder of a bank account to be assigned to the request.</param>
+		/// <param name="amount">The amount to withdraw.</param>
+		/// <param name="creditSystem">The credit system to transfer funds to.</param>
+		/// <param name="utcDate">The date and time, in UTC.</param>
+		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
+		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
+		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <returns>
+		/// Returns the queuing event of the funds transfer request
+		/// and optionally the journal which moves the amount to the retaining account of the holder,
+		/// if the <paramref name="amount"/> is positive.
+		/// </returns>
+		public async Task<ActionResult> CreateFundsTransferRequestAsync(
+			ITransferableFundsHolder transferableFundsHolder,
+			IBankAccountHolder bankAccountHolder,
+			decimal amount,
+			CreditSystem creditSystem,
+			DateTime utcDate,
+			string transactionID,
+			Func<J, Task> asyncJournalAppendAction,
+			string batchID = null)
+		{
+			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
+
+			var encryptedBankAccountInfo = bankAccountHolder.EncryptedBankAccountInfo.Clone(this.DomainContainer);
+
+			return await CreateFundsTransferRequestAsync(
+				transferableFundsHolder,
+				encryptedBankAccountInfo,
+				amount,
+				creditSystem,
+				utcDate,
+				transactionID,
+				asyncJournalAppendAction,
+				batchID);
+		}
+
+		/// <summary>
+		/// Request withdrawal from a holder of funds.
+		/// </summary>
+		/// <param name="transferableFundsHolder">The holder of funds and owner of bank account.</param>
+		/// <param name="amount">The amount to withdraw.</param>
+		/// <param name="creditSystem">The credit system to transfer funds to.</param>
+		/// <param name="utcDate">The date and time, in UTC.</param>
+		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
+		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
+		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <returns>
+		/// Returns the queuing event of the funds transfer request
+		/// and optionally the journal which moves the amount to the retaining account of the holder,
+		/// if the <paramref name="amount"/> is positive.
+		/// </returns>
+		public async Task<ActionResult> CreateFundsTransferRequestAsync(
+			ITransferableFundsHolderWithBankAccount transferableFundsHolder,
+			decimal amount,
+			CreditSystem creditSystem,
+			DateTime utcDate,
+			string transactionID,
+			Func<J, Task> asyncJournalAppendAction,
+			string batchID = null)
+		{
+			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
+
+			var bankAccountHolder = transferableFundsHolder.BankingDetail;
+
+			if (bankAccountHolder == null)
+				throw new ArgumentException(
+					"The BankingDetail of the funds holder is not set.",
+					nameof(transferableFundsHolder));
+
+			var encryptedBankAccountInfo =
+				bankAccountHolder.EncryptedBankAccountInfo.Clone(this.DomainContainer);
+
+			return await CreateFundsTransferRequestAsync(
+				transferableFundsHolder,
+				encryptedBankAccountInfo,
+				amount,
+				creditSystem,
+				utcDate,
+				transactionID,
+				asyncJournalAppendAction,
 				batchID);
 		}
 
@@ -452,7 +581,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="request">The funds tranfer request.</param>
 		/// <param name="utcDate">The event time, in UTC.</param>
 		/// <param name="eventType">The type of the event.</param>
-		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
+		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="responseCode">The optinal response code of the event.</param>
 		/// <param name="traceCode">The optional trace code for the event.</param>
 		/// <param name="comments">Optional comments.</param>
@@ -468,7 +597,7 @@ namespace Grammophone.Domos.Accounting
 			FundsTransferRequest request,
 			DateTime utcDate,
 			FundsTransferEventType eventType,
-			Action<J> actionToAppendJournal = null,
+			Func<J, Task> asyncJournalAppendAction = null,
 			string responseCode = null,
 			string traceCode = null,
 			string comments = null)
@@ -579,14 +708,14 @@ namespace Grammophone.Domos.Accounting
 
 				this.DomainContainer.FundsTransferEvents.Add(transferEvent);
 
-				if (actionToAppendJournal != null)
+				if (asyncJournalAppendAction != null)
 				{
 					if (journal == null)
 					{
 						journal = CreateJournalForFundsTransferEvent(transferEvent);
 					}
 
-					actionToAppendJournal(journal);
+					await asyncJournalAppendAction(journal);
 				}
 
 				if (journal != null)
@@ -637,94 +766,6 @@ namespace Grammophone.Domos.Accounting
 							 && ftr.CreditSystemID == creditSystem.ID
 							 select ftr;
 			}
-		}
-
-		/// <summary>
-		/// Request withdrawal from a holder of funds.
-		/// </summary>
-		/// <param name="transferableFundsHolder">The holder of funds.</param>
-		/// <param name="bankAccountInfo">An account info to be assigned to the request.</param>
-		/// <param name="amount">The amount to withdraw.</param>
-		/// <param name="creditSystem">The credit system to transfer funds to.</param>
-		/// <param name="utcDate">The date and time, in UTC.</param>
-		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
-		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
-		/// <param name="batchID">Optional batch ID of the funds request.</param>
-		/// <returns>
-		/// Returns the queuing event of the funds transfer request
-		/// and optionally the journal which moves the amount to the retaining account of the holder,
-		/// if the <paramref name="amount"/> is positive.
-		/// </returns>
-		public async Task<ActionResult> CreateFundsTransferRequestAsync(
-			ITransferableFundsHolder transferableFundsHolder,
-			BankAccountInfo bankAccountInfo,
-			decimal amount,
-			CreditSystem creditSystem,
-			DateTime utcDate,
-			string transactionID,
-			Action<J> actionToAppendJournal,
-			string batchID = null)
-		{
-			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
-
-			var encryptedBankAccountInfo = bankAccountInfo.Encrypt(this.DomainContainer);
-
-			return await CreateFundsTransferRequestAsync(
-				transferableFundsHolder,
-				encryptedBankAccountInfo,
-				amount,
-				creditSystem,
-				utcDate,
-				transactionID,
-				actionToAppendJournal,
-				batchID);
-		}
-
-		/// <summary>
-		/// Request withdrawal from a holder of funds.
-		/// </summary>
-		/// <param name="transferableFundsHolder">The holder of funds and owner of bank account.</param>
-		/// <param name="amount">The amount to withdraw.</param>
-		/// <param name="creditSystem">The credit system to transfer funds to.</param>
-		/// <param name="utcDate">The date and time, in UTC.</param>
-		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
-		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
-		/// <param name="batchID">Optional batch ID of the funds request.</param>
-		/// <returns>
-		/// Returns the queuing event of the funds transfer request
-		/// and optionally the journal which moves the amount to the retaining account of the holder,
-		/// if the <paramref name="amount"/> is positive.
-		/// </returns>
-		public async Task<ActionResult> CreateFundsTransferRequestAsync(
-			ITransferableFundsHolderWithBankAccount transferableFundsHolder,
-			decimal amount,
-			CreditSystem creditSystem,
-			DateTime utcDate,
-			string transactionID,
-			Action<J> actionToAppendJournal,
-			string batchID = null)
-		{
-			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
-
-			var bankAccountHolder = transferableFundsHolder.BankingDetail;
-
-			if (bankAccountHolder == null)
-				throw new ArgumentException(
-					"The BankingDetail of the funds holder is not set.",
-					nameof(transferableFundsHolder));
-
-			var encryptedBankAccountInfo = 
-				bankAccountHolder.EncryptedBankAccountInfo.Clone(this.DomainContainer);
-
-			return await CreateFundsTransferRequestAsync(
-				transferableFundsHolder,
-				encryptedBankAccountInfo,
-				amount,
-				creditSystem,
-				utcDate,
-				transactionID,
-				actionToAppendJournal,
-				batchID);
 		}
 
 		#endregion
@@ -991,7 +1032,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transactionID">The ID of the transaction.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
-		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
+		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional ID of the batch.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
@@ -1006,7 +1047,7 @@ namespace Grammophone.Domos.Accounting
 			string transactionID,
 			Account mainAccount,
 			Account escrowAccount,
-			Action<J> actionToAppendJournal,
+			Func<J, Task> asyncJournalAppendAction,
 			string batchID = null)
 		{
 			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
@@ -1035,7 +1076,7 @@ namespace Grammophone.Domos.Accounting
 					request, 
 					utcDate, 
 					FundsTransferEventType.Queued,
-					actionToAppendJournal);
+					asyncJournalAppendAction);
 
 				await transaction.CommitAsync();
 
@@ -1070,7 +1111,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="creditSystem">The credit system to transfer funds to or from.</param>
 		/// <param name="utcDate">The date and time, in UTC.</param>
 		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
-		/// <param name="actionToAppendJournal">An optional function to append lines to the associated journal.</param>
+		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
@@ -1084,7 +1125,7 @@ namespace Grammophone.Domos.Accounting
 			CreditSystem creditSystem,
 			DateTime utcDate,
 			string transactionID,
-			Action<J> actionToAppendJournal,
+			Func<J, Task> asyncJournalAppendAction,
 			string batchID = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
@@ -1097,7 +1138,7 @@ namespace Grammophone.Domos.Accounting
 				transactionID,
 				transferableFundsHolder.MainAccount,
 				transferableFundsHolder.EscrowAccount,
-				actionToAppendJournal,
+				asyncJournalAppendAction,
 				batchID);
 		}
 
