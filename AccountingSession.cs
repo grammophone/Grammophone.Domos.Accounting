@@ -7,14 +7,12 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Grammophone.Caching;
-using Grammophone.DataAccess;
 using Grammophone.Domos.Accounting.Models;
 using Grammophone.Domos.DataAccess;
 using Grammophone.Domos.Domain;
 using Grammophone.Domos.Domain.Accounting;
 using Grammophone.Domos.Domain.Workflow;
-using Microsoft.Practices.Unity;
-using Microsoft.Practices.Unity.Configuration;
+using Grammophone.Setup;
 
 namespace Grammophone.Domos.Accounting
 {
@@ -46,9 +44,9 @@ namespace Grammophone.Domos.Accounting
 		#region Constants
 
 		/// <summary>
-		/// The size of <see cref="diContainersCache"/>.
+		/// The size of the cache of <see cref="settingsFactory"/>.
 		/// </summary>
-		private const int DIContainersCacheSize = 4096;
+		private const int SettingsCacheSize = 2048;
 
 		#endregion
 
@@ -176,9 +174,9 @@ namespace Grammophone.Domos.Accounting
 		#region Private fields
 
 		/// <summary>
-		/// Cache of DI conainers by configuration section names.
+		/// Cache of settings by configuration section names.
 		/// </summary>
-		private static MRUCache<string, IUnityContainer> diContainersCache;
+		private static SettingsFactory settingsFactory = new SettingsFactory(SettingsCacheSize);
 
 		/// <summary>
 		/// If not null, this entity listener is added to the <see cref="DomainContainer"/>
@@ -208,7 +206,7 @@ namespace Grammophone.Domos.Accounting
 
 			this.ConfigurationSectionName = configurationSectionName;
 
-			this.DIContainer = diContainersCache.Get(configurationSectionName);
+			this.Settings = settingsFactory.Get(configurationSectionName);
 
 			Initialize(domainContainer, agent);
 		}
@@ -231,7 +229,7 @@ namespace Grammophone.Domos.Accounting
 
 			this.ConfigurationSectionName = configurationSectionName;
 
-			this.DIContainer = diContainersCache.Get(configurationSectionName);
+			this.Settings = settingsFactory.Get(configurationSectionName);
 
 			U agent = domainContainer.Users.FirstOrDefault(agentPickPredicate);
 
@@ -243,7 +241,7 @@ namespace Grammophone.Domos.Accounting
 
 		/// <summary>
 		/// Create using an own <see cref="DomainContainer"/>
-		/// specified in <see cref="DIContainer"/>.
+		/// specified in <see cref="Settings"/>.
 		/// </summary>
 		/// <param name="configurationSectionName">The element name of a Unity configuration section.</param>
 		/// <param name="agentPickPredicate">A predicate to select a user.</param>
@@ -254,9 +252,9 @@ namespace Grammophone.Domos.Accounting
 
 			this.ConfigurationSectionName = configurationSectionName;
 
-			this.DIContainer = diContainersCache.Get(configurationSectionName);
+			this.Settings = settingsFactory.Get(configurationSectionName);
 
-			var domainContainer = this.DIContainer.Resolve<D>();
+			var domainContainer = this.Settings.Resolve<D>();
 
 			U agent = domainContainer.Users.FirstOrDefault(agentPickPredicate);
 
@@ -266,16 +264,6 @@ namespace Grammophone.Domos.Accounting
 			this.OwnsDomainContainer = true;
 
 			Initialize(domainContainer, agent);
-		}
-
-		/// <summary>
-		/// Static initialization.
-		/// </summary>
-		static AccountingSession()
-		{
-			diContainersCache = new MRUCache<string, IUnityContainer>(
-				CreateDIContainer,
-				DIContainersCacheSize);
 		}
 
 		#endregion
@@ -326,7 +314,7 @@ namespace Grammophone.Domos.Accounting
 		/// <summary>
 		/// The Unity container dedicated to the accounting session.
 		/// </summary>
-		protected IUnityContainer DIContainer { get; private set; }
+		protected Settings Settings { get; private set; }
 
 		#endregion
 
@@ -1082,24 +1070,6 @@ namespace Grammophone.Domos.Accounting
 
 				return queueEvent;
 			}
-		}
-
-		/// <summary>
-		/// Create a Unity DI container from a configuration section.
-		/// </summary>
-		/// <param name="configurationSectionName">The element name of the configuratio section.</param>
-		/// <returns>Returns the container.</returns>
-		private static IUnityContainer CreateDIContainer(string configurationSectionName)
-		{
-			if (configurationSectionName == null) throw new ArgumentNullException(nameof(configurationSectionName));
-
-			var configurationSection = ConfigurationManager.GetSection(configurationSectionName)
-				as UnityConfigurationSection;
-
-			if (configurationSection == null)
-				throw new AccountingException($"The '{configurationSectionName}' configuration section is not defined.");
-
-			return new UnityContainer().LoadConfiguration(configurationSection);
 		}
 
 		/// <summary>
