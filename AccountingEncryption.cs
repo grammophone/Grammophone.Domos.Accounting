@@ -87,12 +87,13 @@ namespace Grammophone.Domos.Accounting
 
 			var algorithm = lazyEncryptionAlgorithm.Value;
 
-			var encryptedInfo = domainContainer.Create<EncryptedBankAccountInfo>();
-
-			encryptedInfo.BankNumber = bankAccountInfo.BankNumber;
-			encryptedInfo.AccountCode = bankAccountInfo.AccountCode;
-			encryptedInfo.EncryptedAccountNumber = EncryptText(algorithm, bankAccountInfo.AccountNumber);
-			encryptedInfo.EncryptedTransitNumber = EncryptText(algorithm, bankAccountInfo.TransitNumber);
+			var encryptedInfo = new EncryptedBankAccountInfo
+			{
+				BankNumber = bankAccountInfo.BankNumber,
+				AccountCode = bankAccountInfo.AccountCode,
+				EncryptedAccountNumber = EncryptText(algorithm, bankAccountInfo.AccountNumber),
+				EncryptedTransitNumber = EncryptText(algorithm, bankAccountInfo.TransitNumber)
+			};
 
 			return encryptedInfo;
 		}
@@ -113,12 +114,13 @@ namespace Grammophone.Domos.Accounting
 			if (info == null) throw new ArgumentNullException(nameof(info));
 			if (domainContainer == null) throw new ArgumentNullException(nameof(domainContainer));
 
-			var clonedInfo = domainContainer.Create<EncryptedBankAccountInfo>();
-
-			clonedInfo.AccountCode = info.AccountCode;
-			clonedInfo.BankNumber = info.BankNumber;
-			clonedInfo.EncryptedAccountNumber = info.EncryptedAccountNumber;
-			clonedInfo.EncryptedTransitNumber = info.EncryptedTransitNumber;
+			var clonedInfo = new EncryptedBankAccountInfo
+			{
+				AccountCode = info.AccountCode,
+				BankNumber = info.BankNumber,
+				EncryptedAccountNumber = info.EncryptedAccountNumber,
+				EncryptedTransitNumber = info.EncryptedTransitNumber
+			};
 
 			return clonedInfo;
 		}
