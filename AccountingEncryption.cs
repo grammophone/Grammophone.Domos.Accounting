@@ -213,7 +213,7 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		private static string DecryptText(SymmetricAlgorithm algorithm, byte[] encryptedText)
 		{
-			if (encryptedText == null) throw new ArgumentNullException(nameof(encryptedText));
+			if (encryptedText == null) return null;
 
 			var decryptor = algorithm.CreateDecryptor();
 
