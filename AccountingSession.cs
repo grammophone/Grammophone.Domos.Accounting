@@ -155,9 +155,7 @@ namespace Grammophone.Domos.Accounting
 
 				trackingEntity.CreationDate = now;
 
-				var userTrackingEntity = entity as IUserTrackingEntity;
-
-				if (userTrackingEntity != null)
+				if (entity is IUserTrackingEntity userTrackingEntity)
 				{
 					if (userTrackingEntity.OwningUserID == 0L)
 					{
@@ -917,10 +915,6 @@ namespace Grammophone.Domos.Accounting
 			var journal = this.DomainContainer.Journals.Create();
 			this.DomainContainer.Journals.Add(journal);
 
-			journal.OwningUsers.Add(this.Agent);
-
-			journal.InheritOwnersFrom(entity);
-
 			return journal;
 		}
 
@@ -941,11 +935,6 @@ namespace Grammophone.Domos.Accounting
 			var journal = this.DomainContainer.Journals.Create();
 			this.DomainContainer.Journals.Add(journal);
 
-			journal.OwningUsers.Add(this.Agent);
-
-			journal.InheritOwnersFrom(request.MainAccount);
-			journal.InheritOwnersFrom(request.EscrowAccount);
-
 			journal.Description = String.Format(AccountingMessages.GENERIC_FUNDS_TRANSFER_JOURNAL, transferEvent.Type);
 
 			return journal;
@@ -963,8 +952,6 @@ namespace Grammophone.Domos.Accounting
 			var posting = this.DomainContainer.Postings.Create();
 			journal.Postings.Add(posting);
 
-			posting.InheritOwnersFrom(journal);
-
 			return posting;
 		}
 
@@ -980,8 +967,6 @@ namespace Grammophone.Domos.Accounting
 
 			var remittance = this.DomainContainer.Remittances.Create();
 			journal.Remittances.Add(remittance);
-
-			remittance.InheritOwnersFrom(journal);
 
 			remittance.CreditSystemID = creditSystemID;
 
