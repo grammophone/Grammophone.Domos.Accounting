@@ -75,6 +75,11 @@
     <Compile Include="BalanceException.cs" />
     <Compile Include="JournalAlreadyExecutedException.cs" />
     <Compile Include="Models\BankAccountInfo.cs" />
+    <Compile Include="Models\BankAccountInfoResources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>BankAccountInfoResources.resx</DependentUpon>
+    </Compile>
     <Compile Include="NegativeBalanceException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -108,6 +113,11 @@
     <EmbeddedResource Include="AccountingMessages.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>AccountingMessages.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Models\BankAccountInfoResources.fr.resx" />
+    <EmbeddedResource Include="Models\BankAccountInfoResources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>BankAccountInfoResources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

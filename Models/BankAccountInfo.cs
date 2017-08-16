@@ -25,6 +25,9 @@ namespace Grammophone.Domos.Accounting.Models
 		[Required]
 		[MaxLength(50)]
 		[XmlAttribute]
+		[Display(
+			Name = nameof(BankAccountInfoResources.AccountNumber_Name),
+			ResourceType = typeof(BankAccountInfoResources))]
 		public virtual string AccountNumber { get; set; }
 
 		/// <summary>
@@ -32,6 +35,9 @@ namespace Grammophone.Domos.Accounting.Models
 		/// </summary>
 		[MaxLength(6)]
 		[XmlAttribute]
+		[Display(
+			Name = nameof(BankAccountInfoResources.BankNumber_Name),
+			ResourceType = typeof(BankAccountInfoResources))]
 		public virtual string BankNumber { get; set; }
 
 		/// <summary>
@@ -39,6 +45,9 @@ namespace Grammophone.Domos.Accounting.Models
 		/// </summary>
 		[MaxLength(16)]
 		[XmlAttribute]
+		[Display(
+			Name = nameof(BankAccountInfoResources.TransitNumber_Name),
+			ResourceType = typeof(BankAccountInfoResources))]
 		public virtual string TransitNumber { get; set; }
 
 		/// <summary>
@@ -46,6 +55,9 @@ namespace Grammophone.Domos.Accounting.Models
 		/// </summary>
 		[MaxLength(6)]
 		[XmlAttribute]
+		[Display(
+			Name = nameof(BankAccountInfoResources.AccountCode_Name),
+			ResourceType = typeof(BankAccountInfoResources))]
 		public virtual string AccountCode { get; set; }
 	}
 }
