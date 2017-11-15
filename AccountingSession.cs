@@ -341,6 +341,40 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
+		/// Create and persist a batch for funds transfer requests.
+		/// </summary>
+		/// <param name="batchID">The ID of the batch.</param>
+		/// <returns>Returns the created and persisted batch.</returns>
+		public async Task<FundsTransferRequestBatch> CreateFundsTransferRequestBatchAsync(Guid batchID)
+		{
+			var batch = this.DomainContainer.FundsTransferRequestBatches.Create();
+			this.DomainContainer.FundsTransferRequestBatches.Add(batch);
+
+			batch.ID = batchID;
+
+			await this.DomainContainer.SaveChangesAsync();
+
+			return batch;
+		}
+
+		/// <summary>
+		/// Create and persist a collation for funds transfer events.
+		/// </summary>
+		/// <param name="collationID">The ID of the collation.</param>
+		/// <returns>Returns the created and persisted collation.</returns>
+		public async Task<FundsTransferEventCollation> CreateFundsTransferEventCollationAsync(Guid collationID)
+		{
+			var collation = this.DomainContainer.FundsTransferEventCollations.Create();
+			this.DomainContainer.FundsTransferEventCollations.Add(collation);
+
+			collation.ID = collationID;
+
+			await this.DomainContainer.SaveChangesAsync();
+
+			return collation;
+		}
+
+		/// <summary>
 		/// Create and persist a <see cref="FundsTransferRequest"/> and record
 		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Queued"/>
 		/// in it.
@@ -368,7 +402,7 @@ namespace Grammophone.Domos.Accounting
 			Account mainAccount,
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction,
-			string batchID = null)
+			Guid? batchID = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 
@@ -414,7 +448,7 @@ namespace Grammophone.Domos.Accounting
 			Account mainAccount,
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction,
-			string batchID = null)
+			Guid? batchID = null)
 		{
 			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
 
@@ -456,7 +490,7 @@ namespace Grammophone.Domos.Accounting
 			DateTime utcDate,
 			string transactionID,
 			Func<J, Task> asyncJournalAppendAction,
-			string batchID = null)
+			Guid? batchID = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 
@@ -497,7 +531,7 @@ namespace Grammophone.Domos.Accounting
 			DateTime utcDate,
 			string transactionID,
 			Func<J, Task> asyncJournalAppendAction,
-			string batchID = null)
+			Guid? batchID = null)
 		{
 			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
 
@@ -536,7 +570,7 @@ namespace Grammophone.Domos.Accounting
 			DateTime utcDate,
 			string transactionID,
 			Func<J, Task> asyncJournalAppendAction,
-			string batchID = null)
+			Guid? batchID = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 
@@ -568,6 +602,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="utcDate">The event time, in UTC.</param>
 		/// <param name="eventType">The type of the event.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
+		/// <param name="collationID">Optional ID of the event collation.</param>
 		/// <param name="responseCode">The optinal response code of the event.</param>
 		/// <param name="traceCode">The optional trace code for the event.</param>
 		/// <param name="comments">Optional comments.</param>
@@ -584,6 +619,7 @@ namespace Grammophone.Domos.Accounting
 			DateTime utcDate,
 			FundsTransferEventType eventType,
 			Func<J, Task> asyncJournalAppendAction = null,
+			Guid? collationID = null,
 			string responseCode = null,
 			string traceCode = null,
 			string comments = null)
@@ -608,6 +644,7 @@ namespace Grammophone.Domos.Accounting
 				transferEvent.ResponseCode = responseCode;
 				transferEvent.TraceCode = traceCode;
 				transferEvent.Type = eventType;
+				transferEvent.CollationID = collationID;
 				transferEvent.Date = utcDate;
 
 				transferEvent.Request = request;
@@ -882,7 +919,7 @@ namespace Grammophone.Domos.Accounting
 			journalLines.AddRange(journal.Postings);
 
 			var futureBalancesByAccount =
-					journalLines.Select(jl => jl.Account).Distinct().ToDictionary(a => a, a => a.Balance);
+				journalLines.Select(jl => jl.Account).Distinct().ToDictionary(a => a, a => a.Balance);
 
 			for (int i = 0; i < journalLines.Count; i++)
 			{
@@ -1007,6 +1044,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional ID of the batch.</param>
+		/// <param name="queueEventCollationID">The optional ID of the collation of queuing event being generated.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -1021,7 +1059,8 @@ namespace Grammophone.Domos.Accounting
 			Account mainAccount,
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction,
-			string batchID = null)
+			Guid? batchID = null,
+			Guid? queueEventCollationID = null)
 		{
 			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
 			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
@@ -1049,7 +1088,8 @@ namespace Grammophone.Domos.Accounting
 					request, 
 					utcDate, 
 					FundsTransferEventType.Queued,
-					asyncJournalAppendAction);
+					asyncJournalAppendAction,
+					queueEventCollationID);
 
 				await transaction.CommitAsync();
 
@@ -1081,7 +1121,7 @@ namespace Grammophone.Domos.Accounting
 			DateTime utcDate,
 			string transactionID,
 			Func<J, Task> asyncJournalAppendAction,
-			string batchID = null)
+			Guid? batchID = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 
