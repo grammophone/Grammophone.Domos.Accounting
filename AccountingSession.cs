@@ -388,6 +388,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transactionID">The tracking ID of the transaction.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
+		/// <param name="queueEventCollationID">The optional ID of the collation of queuing event being generated.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -402,7 +403,8 @@ namespace Grammophone.Domos.Accounting
 			Account mainAccount,
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction,
-			Guid? batchID = null)
+			Guid? batchID = null,
+			Guid? queueEventCollationID = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 
@@ -434,6 +436,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
+		/// <param name="queueEventCollationID">The optional ID of the collation of queuing event being generated.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -448,7 +451,8 @@ namespace Grammophone.Domos.Accounting
 			Account mainAccount,
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction,
-			Guid? batchID = null)
+			Guid? batchID = null,
+			Guid? queueEventCollationID = null)
 		{
 			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
 
@@ -463,7 +467,8 @@ namespace Grammophone.Domos.Accounting
 				mainAccount,
 				escrowAccount,
 				asyncJournalAppendAction,
-				batchID);
+				batchID,
+				queueEventCollationID);
 		}
 
 		/// <summary>
@@ -521,6 +526,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <param name="queueEventCollationID">The optional ID of the collation of queuing event being generated.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -534,7 +540,8 @@ namespace Grammophone.Domos.Accounting
 			DateTime utcDate,
 			string transactionID,
 			Func<J, Task> asyncJournalAppendAction,
-			Guid? batchID = null)
+			Guid? batchID = null,
+			Guid? queueEventCollationID = null)
 		{
 			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
 
@@ -548,7 +555,8 @@ namespace Grammophone.Domos.Accounting
 				utcDate,
 				transactionID,
 				asyncJournalAppendAction,
-				batchID);
+				batchID,
+				queueEventCollationID);
 		}
 
 		/// <summary>
@@ -561,6 +569,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <param name="queueEventCollationID">The optional ID of the collation of queuing event being generated.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -573,7 +582,8 @@ namespace Grammophone.Domos.Accounting
 			DateTime utcDate,
 			string transactionID,
 			Func<J, Task> asyncJournalAppendAction,
-			Guid? batchID = null)
+			Guid? batchID = null,
+			Guid? queueEventCollationID = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 
@@ -595,7 +605,8 @@ namespace Grammophone.Domos.Accounting
 				utcDate,
 				transactionID,
 				asyncJournalAppendAction,
-				batchID);
+				batchID,
+				queueEventCollationID);
 		}
 
 		/// <summary>
