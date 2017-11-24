@@ -1072,7 +1072,7 @@ namespace Grammophone.Domos.Accounting
 			string transactionID,
 			Account mainAccount,
 			Account escrowAccount,
-			Func<J, Task> asyncJournalAppendAction,
+			Func<J, Task> asyncJournalAppendAction = null,
 			Guid? batchID = null,
 			Guid? queueEventCollationID = null)
 		{
