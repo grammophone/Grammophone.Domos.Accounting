@@ -620,6 +620,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="responseCode">The optinal response code of the event.</param>
 		/// <param name="traceCode">The optional trace code for the event.</param>
 		/// <param name="comments">Optional comments.</param>
+		/// <param name="exception">Optional exception to record in the event.</param>
 		/// <returns>
 		/// Returns an action holding the created event
 		/// and optionally any journal executed because of the event.
@@ -636,7 +637,8 @@ namespace Grammophone.Domos.Accounting
 			Guid? collationID = null,
 			string responseCode = null,
 			string traceCode = null,
-			string comments = null)
+			string comments = null,
+			Exception exception = null)
 		{
 			if (request == null) throw new ArgumentNullException(nameof(request));
 			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
@@ -685,6 +687,30 @@ namespace Grammophone.Domos.Accounting
 
 				transferEvent.Request = request;
 
+				if (exception != null)
+				{
+					var serializationFormatter = new Serialization.FastBinaryFormatter();
+
+					try
+					{
+						using (var stream = new System.IO.MemoryStream())
+						{
+							serializationFormatter.Serialize(stream, exception);
+
+							transferEvent.ExceptionData = stream.ToArray();
+						}
+					}
+					catch (System.Runtime.Serialization.SerializationException serializationException)
+					{
+						using (var stream = new System.IO.MemoryStream())
+						{
+							serializationFormatter.Serialize(stream, serializationException);
+
+							transferEvent.ExceptionData = stream.ToArray();
+						}
+					}
+				}
+
 				J journal = null;
 
 				switch (eventType)
@@ -713,6 +739,10 @@ namespace Grammophone.Domos.Accounting
 					case FundsTransferEventType.Submitted:
 					case FundsTransferEventType.Accepted:
 						request.State = FundsTransferState.Submitted;
+						break;
+
+					case FundsTransferEventType.WorkflowFailed:
+						request.State = FundsTransferState.WorkflowFailed;
 						break;
 
 					case FundsTransferEventType.Failed:
@@ -791,6 +821,35 @@ namespace Grammophone.Domos.Accounting
 					FundsTransferEvent = transferEvent,
 					Journal = journal
 				};
+			}
+		}
+
+		/// <summary>
+		/// Get the exception stored in <see cref="FundsTransferEvent.ExceptionData"/>
+		/// of a funds transfer event,
+		/// if any, else return null.
+		/// </summary>
+		/// <param name="fundsTransferEvent">The funds transfer event.</param>
+		/// <returns>
+		/// If the <see cref="FundsTransferEvent.ExceptionData"/> is not null,
+		/// returns the exception, else returns null.
+		/// </returns>
+		public Exception GetFundsTransferEventException(FundsTransferEvent fundsTransferEvent)
+		{
+			if (fundsTransferEvent == null) throw new ArgumentNullException(nameof(fundsTransferEvent));
+
+			if (fundsTransferEvent.ExceptionData != null)
+			{
+				var serializationFormatter = new Serialization.FastBinaryFormatter();
+
+				using (var stream = new System.IO.MemoryStream(fundsTransferEvent.ExceptionData))
+				{
+					return (Exception)serializationFormatter.Deserialize(stream);
+				}
+			}
+			else
+			{
+				return null;
 			}
 		}
 
