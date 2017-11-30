@@ -643,14 +643,36 @@ namespace Grammophone.Domos.Accounting
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
-				bool typeIsAlreadyAdded = await
+				// Wllow inly one queueing or success event per request.
+				switch (eventType)
+				{
+					case FundsTransferEventType.Queued:
+					case FundsTransferEventType.Succeeded:
+						{
+							bool typeIsAlreadyAdded = await
+								this.DomainContainer.FundsTransferEvents
+								.Where(e => e.RequestID == request.ID && e.Type == eventType)
+								.AnyAsync();
+
+							if (typeIsAlreadyAdded)
+								throw new AccountingException(
+									$"An event of type '{eventType}' already exists for request with transaction ID '{request.TransactionID}'.");
+
+						}
+						break;
+
+					default:
+						break;
+				}
+
+				bool eventIsNotnew = await
 					this.DomainContainer.FundsTransferEvents
-					.Where(e => e.RequestID == request.ID && e.Type == eventType)
+					.Where(e => e.Request.ID == request.ID && e.Date >= utcDate)
 					.AnyAsync();
 
-				if (typeIsAlreadyAdded)
+				if (eventIsNotnew)
 					throw new AccountingException(
-						$"An event of type '{eventType}' already exists for request with transaction ID '{request.TransactionID}'.");
+						"The added event is not newer than all the existing events of the request.");
 
 				var transferEvent = this.DomainContainer.FundsTransferEvents.Create();
 
