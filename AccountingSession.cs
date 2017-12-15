@@ -299,7 +299,7 @@ namespace Grammophone.Domos.Accounting
 			get
 			{
 				return from ftr in this.DomainContainer.FundsTransferRequests
-							 let lastEventType = ftr.Events.OrderByDescending(e => e.Date).Select(e => e.Type).FirstOrDefault()
+							 let lastEventType = ftr.Events.OrderByDescending(e => e.Time).Select(e => e.Type).FirstOrDefault()
 							 where lastEventType == FundsTransferEventType.Pending
 							 select ftr;
 			}
@@ -568,10 +568,59 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
+		/// Record an event for a <see cref="FundsTransferBatch"/>.
+		/// </summary>
+		/// <param name="batch">The <see cref="FundsTransferBatch"/>.</param>
+		/// <param name="eventType">The type of the event.</param>
+		/// <param name="utcTime">The UTC time of the event.</param>
+		/// <returns>Returns the created and persisted event.</returns>
+		/// <exception cref="AccountingException">
+		/// Thrown when there already exists an event in the batch having
+		/// superceding <paramref name="eventType"/>,
+		/// or when a more recent event than <paramref name="utcTime"/> exists.
+		/// </exception>
+		public async Task<FundsTransferBatchEvent> AddFundsTransferBatchEventAsync(
+			FundsTransferBatch batch,
+			FundsTransferBatchEventType eventType,
+			DateTime utcTime)
+		{
+			if (batch == null) throw new ArgumentNullException(nameof(batch));
+			if (utcTime.Kind != DateTimeKind.Utc) throw new ArgumentException("Time is not UTC.", nameof(utcTime));
+
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				var lastEventType = batch.Events.Max(e => e.Type);
+
+				bool eventIsSuperceded = lastEventType >= eventType;
+
+				if (eventIsSuperceded)
+					throw new AccountingException(
+						$"An event of type '{lastEventType}' already exists for batch with ID '{batch.ID}'.");
+
+				DateTime lastEventTime = batch.Events.Max(e => e.Time);
+
+				if (utcTime <= lastEventTime)
+					throw new AccountingException(
+						$"An more recent event already exists for batch with ID '{batch.ID}'.");
+
+				var batchEvent = this.DomainContainer.FundsTransferBatchEvents.Create();
+				this.DomainContainer.FundsTransferBatchEvents.Add(batchEvent);
+
+				batchEvent.Type = eventType;
+				batchEvent.Batch = batch;
+				batchEvent.Time = utcTime;
+
+				await transaction.CommitAsync();
+
+				return batchEvent;
+			}
+		}
+
+		/// <summary>
 		/// Add an event for a funds tranfer request.
 		/// </summary>
 		/// <param name="request">The funds tranfer request.</param>
-		/// <param name="utcDate">The event time, in UTC.</param>
+		/// <param name="utcTime">The event time, in UTC.</param>
 		/// <param name="eventType">The type of the event.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="collationID">Optional ID of the event collation.</param>
@@ -599,7 +648,7 @@ namespace Grammophone.Domos.Accounting
 		/// </exception>
 		public async Task<ActionResult> AddFundsTransferEventAsync(
 			FundsTransferRequest request,
-			DateTime utcDate,
+			DateTime utcTime,
 			FundsTransferEventType eventType,
 			Func<J, Task> asyncJournalAppendAction = null,
 			Guid? collationID = null,
@@ -609,7 +658,7 @@ namespace Grammophone.Domos.Accounting
 			Exception exception = null)
 		{
 			if (request == null) throw new ArgumentNullException(nameof(request));
-			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
+			if (utcTime.Kind != DateTimeKind.Utc) throw new ArgumentException("Time is not UTC.", nameof(utcTime));
 
 			var batch = request.Batch;
 
@@ -651,7 +700,7 @@ namespace Grammophone.Domos.Accounting
 
 				bool eventIsNotnew = await
 					this.DomainContainer.FundsTransferEvents
-					.Where(e => e.Request.ID == request.ID && e.Date >= utcDate)
+					.Where(e => e.Request.ID == request.ID && e.Time >= utcTime)
 					.AnyAsync();
 
 				if (eventIsNotnew)
@@ -665,7 +714,7 @@ namespace Grammophone.Domos.Accounting
 				transferEvent.TraceCode = traceCode;
 				transferEvent.Type = eventType;
 				transferEvent.CollationID = collationID;
-				transferEvent.Date = utcDate;
+				transferEvent.Time = utcTime;
 
 				transferEvent.Request = request;
 
@@ -851,14 +900,14 @@ namespace Grammophone.Domos.Accounting
 			if (includeSubmitted)
 			{
 				return from ftr in fundsTransferRequestsQuery
-							 let lastEventType = ftr.Events.OrderByDescending(e => e.Date).Select(e => e.Type).FirstOrDefault()
+							 let lastEventType = ftr.Events.OrderByDescending(e => e.Time).Select(e => e.Type).FirstOrDefault()
 							 where lastEventType == FundsTransferEventType.Pending || lastEventType == FundsTransferEventType.Submitted
 							 select ftr;
 			}
 			else
 			{
 				return from ftr in fundsTransferRequestsQuery
-							 let lastEventType = ftr.Events.OrderByDescending(e => e.Date).Select(e => e.Type).FirstOrDefault()
+							 let lastEventType = ftr.Events.OrderByDescending(e => e.Time).Select(e => e.Type).FirstOrDefault()
 							 where lastEventType == FundsTransferEventType.Pending
 							 select ftr;
 			}
