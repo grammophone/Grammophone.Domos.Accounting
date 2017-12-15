@@ -349,15 +349,18 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (creditSystem == null) throw new ArgumentNullException(nameof(creditSystem));
 
-			var batch = this.DomainContainer.FundsTransferBatches.Create();
-			this.DomainContainer.FundsTransferBatches.Add(batch);
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				var batch = this.DomainContainer.FundsTransferBatches.Create();
+				this.DomainContainer.FundsTransferBatches.Add(batch);
 
-			batch.ID = Guid.NewGuid();
-			batch.CreditSystem = creditSystem;
+				batch.ID = Guid.NewGuid();
+				batch.CreditSystem = creditSystem;
 
-			await this.DomainContainer.SaveChangesAsync();
+				await transaction.CommitAsync();
 
-			return batch;
+				return batch;
+			}
 		}
 
 		/// <summary>
@@ -575,8 +578,9 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="utcTime">The UTC time of the event.</param>
 		/// <returns>Returns the created and persisted event.</returns>
 		/// <exception cref="AccountingException">
-		/// Thrown when there already exists an event in the batch having
-		/// superceding <paramref name="eventType"/>,
+		/// Thrown when <paramref name="eventType"/> is <see cref="FundsTransferBatchEventType.Pending"/>
+		/// or <see cref="FundsTransferBatchEventType.Responded"/> and
+		/// there already exists an event with the same type,
 		/// or when a more recent event than <paramref name="utcTime"/> exists.
 		/// </exception>
 		public async Task<FundsTransferBatchEvent> AddFundsTransferBatchEventAsync(
@@ -589,17 +593,27 @@ namespace Grammophone.Domos.Accounting
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
-				var lastEventType = batch.Events.Max(e => e.Type);
+				switch (eventType)
+				{
+					// Allow only one event of type Pending or Responded in a batch.
+					case FundsTransferBatchEventType.Pending:
+					case FundsTransferBatchEventType.Responded:
+						{
+							bool eventTypeAlreadyExists = batch.Events.Any(e => e.Type == eventType);
 
-				bool eventIsSuperceded = lastEventType >= eventType;
+							if (eventTypeAlreadyExists)
+								throw new AccountingException(
+									$"An event of type '{eventType}' already exists for batch with ID '{batch.ID}'.");
+						}
+						break;
 
-				if (eventIsSuperceded)
-					throw new AccountingException(
-						$"An event of type '{lastEventType}' already exists for batch with ID '{batch.ID}'.");
+					default:
+						break;
+				}
 
-				DateTime lastEventTime = batch.Events.Max(e => e.Time);
+				bool moreRecentEventExists = batch.Events.Any(e => e.Time >= utcTime);
 
-				if (utcTime <= lastEventTime)
+				if (moreRecentEventExists)
 					throw new AccountingException(
 						$"An more recent event already exists for batch with ID '{batch.ID}'.");
 
@@ -676,7 +690,7 @@ namespace Grammophone.Domos.Accounting
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
-				// Wllow only one pending or success event per request.
+				// Allow only one pending or success event per request.
 				switch (eventType)
 				{
 					case FundsTransferEventType.Pending:
