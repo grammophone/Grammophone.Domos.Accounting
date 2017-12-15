@@ -357,6 +357,8 @@ namespace Grammophone.Domos.Accounting
 				batch.ID = Guid.NewGuid();
 				batch.CreditSystem = creditSystem;
 
+				await AddFundsTransferBatchEventAsync(batch, FundsTransferBatchEventType.Pending, DateTime.UtcNow);
+
 				await transaction.CommitAsync();
 
 				return batch;
@@ -606,9 +608,6 @@ namespace Grammophone.Domos.Accounting
 									$"An event of type '{eventType}' already exists for batch with ID '{batch.ID}'.");
 						}
 						break;
-
-					default:
-						break;
 				}
 
 				bool moreRecentEventExists = batch.Events.Any(e => e.Time >= utcTime);
@@ -706,9 +705,6 @@ namespace Grammophone.Domos.Accounting
 									$"An event of type '{eventType}' already exists for request with transaction ID '{request.TransactionID}'.");
 
 						}
-						break;
-
-					default:
 						break;
 				}
 
