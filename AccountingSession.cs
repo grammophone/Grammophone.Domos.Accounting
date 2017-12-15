@@ -292,7 +292,7 @@ namespace Grammophone.Domos.Accounting
 		/// <summary>
 		/// Get the <see cref="FundsTransferRequest"/>s which
 		/// only have a <see cref="FundsTransferEvent"/> of <see cref="FundsTransferEvent.Type"/>
-		/// set as <see cref="FundsTransferEventType.Queued"/>.
+		/// set as <see cref="FundsTransferEventType.Pending"/>.
 		/// </summary>
 		public IQueryable<FundsTransferRequest> PendingFundTransferRequests
 		{
@@ -300,7 +300,7 @@ namespace Grammophone.Domos.Accounting
 			{
 				return from ftr in this.DomainContainer.FundsTransferRequests
 							 let lastEventType = ftr.Events.OrderByDescending(e => e.Date).Select(e => e.Type).FirstOrDefault()
-							 where lastEventType == FundsTransferEventType.Queued
+							 where lastEventType == FundsTransferEventType.Pending
 							 select ftr;
 			}
 		}
@@ -343,14 +343,17 @@ namespace Grammophone.Domos.Accounting
 		/// <summary>
 		/// Create and persist a batch for funds transfer requests.
 		/// </summary>
-		/// <param name="batchID">The ID of the batch.</param>
+		/// <param name="creditSystem">The credit system which will serve the batch.</param>
 		/// <returns>Returns the created and persisted batch.</returns>
-		public async Task<FundsTransferRequestBatch> CreateFundsTransferRequestBatchAsync(Guid batchID)
+		public async Task<FundsTransferBatch> CreateFundsTransferBatchAsync(CreditSystem creditSystem)
 		{
-			var batch = this.DomainContainer.FundsTransferRequestBatches.Create();
-			this.DomainContainer.FundsTransferRequestBatches.Add(batch);
+			if (creditSystem == null) throw new ArgumentNullException(nameof(creditSystem));
 
-			batch.ID = batchID;
+			var batch = this.DomainContainer.FundsTransferBatches.Create();
+			this.DomainContainer.FundsTransferBatches.Add(batch);
+
+			batch.ID = Guid.NewGuid();
+			batch.CreditSystem = creditSystem;
 
 			await this.DomainContainer.SaveChangesAsync();
 
@@ -376,16 +379,13 @@ namespace Grammophone.Domos.Accounting
 
 		/// <summary>
 		/// Create and persist a <see cref="FundsTransferRequest"/> and record
-		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Queued"/>
+		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Pending"/>
 		/// in it.
 		/// </summary>
 		/// <param name="bankAccountInfo">The bank account info to be encrypted and recorded.</param>
 		/// <param name="amount">If positive, the amount to be deposited to the account, else withdrawed.</param>
-		/// <param name="creditSystem">The the credit system.</param>
-		/// <param name="utcDate">The time instant in UTC.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
-		/// <param name="transactionID">The tracking ID of the transaction.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <param name="queueEventCollationID">The optional ID of the collation of queuing event being generated.</param>
@@ -397,9 +397,6 @@ namespace Grammophone.Domos.Accounting
 		public async Task<ActionResult> CreateFundsTransferRequestAsync(
 			BankAccountInfo bankAccountInfo,
 			decimal amount,
-			CreditSystem creditSystem,
-			DateTime utcDate,
-			string transactionID,
 			Account mainAccount,
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction,
@@ -413,9 +410,6 @@ namespace Grammophone.Domos.Accounting
 			return await CreateFundsTransferRequestAsync(
 				ownEncryptedBankAccountInfo,
 				amount,
-				creditSystem,
-				utcDate,
-				transactionID,
 				mainAccount,
 				escrowAccount,
 				asyncJournalAppendAction,
@@ -424,14 +418,11 @@ namespace Grammophone.Domos.Accounting
 
 		/// <summary>
 		/// Create and persist a <see cref="FundsTransferRequest"/> and record
-		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Queued"/>
+		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Pending"/>
 		/// in it.
 		/// </summary>
 		/// <param name="bankAccountHolder">An entity holding a bank account.</param>
 		/// <param name="amount">If positive, the amount to be deposited to the account, else withdrawed.</param>
-		/// <param name="creditSystem">The credit system.</param>
-		/// <param name="utcDate">The time instant in UTC.</param>
-		/// <param name="transactionID">The tracking ID of the transaction.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
@@ -445,9 +436,6 @@ namespace Grammophone.Domos.Accounting
 		public async Task<ActionResult> CreateFundsTransferRequestAsync(
 			IBankAccountHolder bankAccountHolder,
 			decimal amount,
-			CreditSystem creditSystem,
-			DateTime utcDate,
-			string transactionID,
 			Account mainAccount,
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction,
@@ -461,9 +449,6 @@ namespace Grammophone.Domos.Accounting
 			return await CreateFundsTransferRequestAsync(
 				ownEncryptedBankAccountInfo,
 				amount,
-				creditSystem,
-				utcDate,
-				transactionID,
 				mainAccount,
 				escrowAccount,
 				asyncJournalAppendAction,
@@ -477,9 +462,6 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transferableFundsHolder">The holder of funds.</param>
 		/// <param name="bankAccountInfo">An account info to be assigned to the request.</param>
 		/// <param name="amount">The amount to withdraw.</param>
-		/// <param name="creditSystem">The credit system to transfer funds to.</param>
-		/// <param name="utcDate">The date and time, in UTC.</param>
-		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="queueEventCollationID">The optional ID of the collation of queuing event being generated.</param>
@@ -492,9 +474,6 @@ namespace Grammophone.Domos.Accounting
 			ITransferableFundsHolder transferableFundsHolder,
 			BankAccountInfo bankAccountInfo,
 			decimal amount,
-			CreditSystem creditSystem,
-			DateTime utcDate,
-			string transactionID,
 			Func<J, Task> asyncJournalAppendAction,
 			Guid? batchID = null,
 			Guid? queueEventCollationID = null)
@@ -507,9 +486,6 @@ namespace Grammophone.Domos.Accounting
 				transferableFundsHolder,
 				encryptedBankAccountInfo,
 				amount,
-				creditSystem,
-				utcDate,
-				transactionID,
 				asyncJournalAppendAction,
 				batchID,
 				queueEventCollationID);
@@ -521,9 +497,6 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transferableFundsHolder">The holder of funds.</param>
 		/// <param name="bankAccountHolder">A holder of a bank account to be assigned to the request.</param>
 		/// <param name="amount">The amount to withdraw.</param>
-		/// <param name="creditSystem">The credit system to transfer funds to.</param>
-		/// <param name="utcDate">The date and time, in UTC.</param>
-		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="queueEventCollationID">The optional ID of the collation of queuing event being generated.</param>
@@ -536,9 +509,6 @@ namespace Grammophone.Domos.Accounting
 			ITransferableFundsHolder transferableFundsHolder,
 			IBankAccountHolder bankAccountHolder,
 			decimal amount,
-			CreditSystem creditSystem,
-			DateTime utcDate,
-			string transactionID,
 			Func<J, Task> asyncJournalAppendAction,
 			Guid? batchID = null,
 			Guid? queueEventCollationID = null)
@@ -551,9 +521,6 @@ namespace Grammophone.Domos.Accounting
 				transferableFundsHolder,
 				encryptedBankAccountInfo,
 				amount,
-				creditSystem,
-				utcDate,
-				transactionID,
 				asyncJournalAppendAction,
 				batchID,
 				queueEventCollationID);
@@ -564,9 +531,6 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		/// <param name="transferableFundsHolder">The holder of funds and owner of bank account.</param>
 		/// <param name="amount">The amount to withdraw.</param>
-		/// <param name="creditSystem">The credit system to transfer funds to.</param>
-		/// <param name="utcDate">The date and time, in UTC.</param>
-		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="queueEventCollationID">The optional ID of the collation of queuing event being generated.</param>
@@ -578,9 +542,6 @@ namespace Grammophone.Domos.Accounting
 		public async Task<ActionResult> CreateFundsTransferRequestAsync(
 			ITransferableFundsHolderWithBankAccount transferableFundsHolder,
 			decimal amount,
-			CreditSystem creditSystem,
-			DateTime utcDate,
-			string transactionID,
 			Func<J, Task> asyncJournalAppendAction,
 			Guid? batchID = null,
 			Guid? queueEventCollationID = null)
@@ -601,9 +562,6 @@ namespace Grammophone.Domos.Accounting
 				transferableFundsHolder,
 				encryptedBankAccountInfo,
 				amount,
-				creditSystem,
-				utcDate,
-				transactionID,
 				asyncJournalAppendAction,
 				batchID,
 				queueEventCollationID);
@@ -625,9 +583,19 @@ namespace Grammophone.Domos.Accounting
 		/// Returns an action holding the created event
 		/// and optionally any journal executed because of the event.
 		/// </returns>
+		/// <remarks>
+		/// For other event type other than <see cref="FundsTransferEventType.Pending"/>,
+		/// the funds transfer <paramref name="request"/> must have been enlisted under a batch,
+		/// ie its <see cref="FundsTransferRequest.Batch"/> property must not be null.
+		/// </remarks>
 		/// <exception cref="AccountingException">
 		/// Thrown when the <paramref name="request"/> already has an event of the
 		/// given <paramref name="eventType"/>.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		/// Thrown when the event type is other than <see cref="FundsTransferEventType.Pending"/>
+		/// and the <paramref name="request"/> is not enlisted under a batch,
+		/// ie its <see cref="FundsTransferRequest.Batch"/> property is null.
 		/// </exception>
 		public async Task<ActionResult> AddFundsTransferEventAsync(
 			FundsTransferRequest request,
@@ -643,12 +611,26 @@ namespace Grammophone.Domos.Accounting
 			if (request == null) throw new ArgumentNullException(nameof(request));
 			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
 
+			var batch = request.Batch;
+
+			// Any event type other than Pending must belong to a request enlisted under a batch.
+			switch (eventType)
+			{
+				case FundsTransferEventType.Pending:
+					break;
+
+				default:
+					if (batch == null)
+						throw new ArgumentException("The funds transfer request has not been enlisted in a batch.", nameof(request));
+					break;
+			}
+
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
-				// Wllow inly one queueing or success event per request.
+				// Wllow only one pending or success event per request.
 				switch (eventType)
 				{
-					case FundsTransferEventType.Queued:
+					case FundsTransferEventType.Pending:
 					case FundsTransferEventType.Succeeded:
 						{
 							bool typeIsAlreadyAdded = await
@@ -715,7 +697,7 @@ namespace Grammophone.Domos.Accounting
 
 				switch (eventType)
 				{
-					case FundsTransferEventType.Queued:
+					case FundsTransferEventType.Pending:
 						if (request.Amount > 0.0M)
 						{
 							journal = CreateJournalForFundsTransferEvent(transferEvent);
@@ -777,7 +759,7 @@ namespace Grammophone.Domos.Accounting
 						journal.Description = AccountingMessages.TRANSFER_SUCCEEDED;
 
 						{
-							var remittance = CreateRemittanceForJournal(journal, request.CreditSystemID);
+							var remittance = CreateRemittanceForJournal(journal, batch.CreditSystemID);
 
 							remittance.Amount = -request.Amount;
 
@@ -857,12 +839,10 @@ namespace Grammophone.Domos.Accounting
 		/// From a set of funds transfer requests, filter those which are pending
 		/// a response.
 		/// </summary>
-		/// <param name="creditSystem">The credit system of the requests.</param>
 		/// <param name="fundsTransferRequestsQuery">The set of requests.</param>
 		/// <param name="includeSubmitted">In the results, include requests which are already submitted.</param>
 		/// <returns>Returns the set of filtered requests.</returns>
 		public IQueryable<FundsTransferRequest> FilterPendingFundsTransferRequests(
-			CreditSystem creditSystem,
 			IQueryable<FundsTransferRequest> fundsTransferRequestsQuery,
 			bool includeSubmitted = false)
 		{
@@ -872,16 +852,14 @@ namespace Grammophone.Domos.Accounting
 			{
 				return from ftr in fundsTransferRequestsQuery
 							 let lastEventType = ftr.Events.OrderByDescending(e => e.Date).Select(e => e.Type).FirstOrDefault()
-							 where lastEventType == FundsTransferEventType.Queued || lastEventType == FundsTransferEventType.Submitted
-							 && ftr.CreditSystemID == creditSystem.ID
+							 where lastEventType == FundsTransferEventType.Pending || lastEventType == FundsTransferEventType.Submitted
 							 select ftr;
 			}
 			else
 			{
 				return from ftr in fundsTransferRequestsQuery
 							 let lastEventType = ftr.Events.OrderByDescending(e => e.Date).Select(e => e.Type).FirstOrDefault()
-							 where lastEventType == FundsTransferEventType.Queued
-							 && ftr.CreditSystemID == creditSystem.ID
+							 where lastEventType == FundsTransferEventType.Pending
 							 select ftr;
 			}
 		}
@@ -1127,14 +1105,11 @@ namespace Grammophone.Domos.Accounting
 
 		/// <summary>
 		/// Create and persist a <see cref="FundsTransferRequest"/> and record
-		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Queued"/>
+		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Pending"/>
 		/// in it.
 		/// </summary>
 		/// <param name="ownEncryptedBankAccountInfo">An account info to be assigned to the request.</param>
 		/// <param name="amount">The amount of the transfer, positive for deposit, negative for withdrawal.</param>
-		/// <param name="creditSystem">The credit system.</param>
-		/// <param name="utcDate">The time in UTC.</param>
-		/// <param name="transactionID">The ID of the transaction.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
@@ -1148,9 +1123,6 @@ namespace Grammophone.Domos.Accounting
 		private async Task<ActionResult> CreateFundsTransferRequestAsync(
 			EncryptedBankAccountInfo ownEncryptedBankAccountInfo,
 			decimal amount,
-			CreditSystem creditSystem,
-			DateTime utcDate,
-			string transactionID,
 			Account mainAccount,
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction = null,
@@ -1158,8 +1130,6 @@ namespace Grammophone.Domos.Accounting
 			Guid? queueEventCollationID = null)
 		{
 			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
-			if (utcDate.Kind != DateTimeKind.Utc) throw new ArgumentException("Date is not UTC.", nameof(utcDate));
-			if (transactionID == null) throw new ArgumentNullException(nameof(transactionID));
 			if (mainAccount == null) throw new ArgumentNullException(nameof(mainAccount));
 			if (escrowAccount == null) throw new ArgumentNullException(nameof(escrowAccount));
 			if (amount == 0.0M) throw new ArgumentException("The amount must not be zero.", nameof(amount));
@@ -1170,9 +1140,8 @@ namespace Grammophone.Domos.Accounting
 
 				request.Amount = amount;
 				request.State = FundsTransferState.Pending;
-				request.TransactionID = transactionID;
+				request.TransactionID = Guid.NewGuid();
 				request.BatchID = batchID;
-				request.CreditSystem = creditSystem;
 				request.MainAccount = mainAccount;
 				request.EscrowAccount = escrowAccount;
 				request.EncryptedBankAccountInfo = ownEncryptedBankAccountInfo;
@@ -1181,8 +1150,8 @@ namespace Grammophone.Domos.Accounting
 
 				var queueEvent = await AddFundsTransferEventAsync(
 					request, 
-					utcDate, 
-					FundsTransferEventType.Queued,
+					DateTime.UtcNow, 
+					FundsTransferEventType.Pending,
 					asyncJournalAppendAction,
 					queueEventCollationID);
 
@@ -1198,9 +1167,6 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transferableFundsHolder">The holder of funds.</param>
 		/// <param name="ownEncryptedBankAccountInfo">An account info to be assigned to the request.</param>
 		/// <param name="amount">The amount of the transfer, positive for deposit, negative for withdrawal.</param>
-		/// <param name="creditSystem">The credit system to transfer funds to or from.</param>
-		/// <param name="utcDate">The date and time, in UTC.</param>
-		/// <param name="transactionID">The ID of the transaction of the funds request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="queueEventCollationID">The optional ID of the collation of queuing event being generated.</param>
@@ -1213,9 +1179,6 @@ namespace Grammophone.Domos.Accounting
 			ITransferableFundsHolder transferableFundsHolder,
 			EncryptedBankAccountInfo ownEncryptedBankAccountInfo,
 			decimal amount,
-			CreditSystem creditSystem,
-			DateTime utcDate,
-			string transactionID,
 			Func<J, Task> asyncJournalAppendAction,
 			Guid? batchID = null,
 			Guid? queueEventCollationID = null)
@@ -1225,9 +1188,6 @@ namespace Grammophone.Domos.Accounting
 			return await CreateFundsTransferRequestAsync(
 				ownEncryptedBankAccountInfo,
 				amount,
-				creditSystem,
-				utcDate,
-				transactionID,
 				transferableFundsHolder.MainAccount,
 				transferableFundsHolder.EscrowAccount,
 				asyncJournalAppendAction,
