@@ -344,8 +344,8 @@ namespace Grammophone.Domos.Accounting
 		/// Create and persist a batch for funds transfer requests.
 		/// </summary>
 		/// <param name="creditSystem">The credit system which will serve the batch.</param>
-		/// <returns>Returns the created and persisted batch.</returns>
-		public async Task<FundsTransferBatch> CreateFundsTransferBatchAsync(CreditSystem creditSystem)
+		/// <returns>Returns the pending event of the created and persisted batch.</returns>
+		public async Task<FundsTransferBatchMessage> CreateFundsTransferBatchAsync(CreditSystem creditSystem)
 		{
 			if (creditSystem == null) throw new ArgumentNullException(nameof(creditSystem));
 
@@ -357,29 +357,12 @@ namespace Grammophone.Domos.Accounting
 				batch.ID = Guid.NewGuid();
 				batch.CreditSystem = creditSystem;
 
-				await AddFundsTransferBatchEventAsync(batch, FundsTransferBatchEventType.Pending, DateTime.UtcNow);
+				var batchMessage = await AddFundsTransferBatchMessageAsync(batch, FundsTransferBatchMessageType.Pending, DateTime.UtcNow);
 
 				await transaction.CommitAsync();
 
-				return batch;
+				return batchMessage;
 			}
-		}
-
-		/// <summary>
-		/// Create and persist a collation for funds transfer events.
-		/// </summary>
-		/// <param name="collationID">The ID of the collation.</param>
-		/// <returns>Returns the created and persisted collation.</returns>
-		public async Task<FundsTransferEventCollation> CreateFundsTransferEventCollationAsync(Guid collationID)
-		{
-			var collation = this.DomainContainer.FundsTransferEventCollations.Create();
-			this.DomainContainer.FundsTransferEventCollations.Add(collation);
-
-			collation.ID = collationID;
-
-			await this.DomainContainer.SaveChangesAsync();
-
-			return collation;
 		}
 
 		/// <summary>
@@ -580,14 +563,14 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="utcTime">The UTC time of the event.</param>
 		/// <returns>Returns the created and persisted event.</returns>
 		/// <exception cref="AccountingException">
-		/// Thrown when <paramref name="eventType"/> is <see cref="FundsTransferBatchEventType.Pending"/>
-		/// or <see cref="FundsTransferBatchEventType.Responded"/> and
+		/// Thrown when <paramref name="eventType"/> is <see cref="FundsTransferBatchMessageType.Pending"/>
+		/// or <see cref="FundsTransferBatchMessageType.Responded"/> and
 		/// there already exists an event with the same type,
 		/// or when a more recent event than <paramref name="utcTime"/> exists.
 		/// </exception>
-		public async Task<FundsTransferBatchEvent> AddFundsTransferBatchEventAsync(
+		public async Task<FundsTransferBatchMessage> AddFundsTransferBatchMessageAsync(
 			FundsTransferBatch batch,
-			FundsTransferBatchEventType eventType,
+			FundsTransferBatchMessageType eventType,
 			DateTime utcTime)
 		{
 			if (batch == null) throw new ArgumentNullException(nameof(batch));
@@ -598,10 +581,10 @@ namespace Grammophone.Domos.Accounting
 				switch (eventType)
 				{
 					// Allow only one event of type Pending or Responded in a batch.
-					case FundsTransferBatchEventType.Pending:
-					case FundsTransferBatchEventType.Responded:
+					case FundsTransferBatchMessageType.Pending:
+					case FundsTransferBatchMessageType.Responded:
 						{
-							bool eventTypeAlreadyExists = batch.Events.Any(e => e.Type == eventType);
+							bool eventTypeAlreadyExists = batch.Messages.Any(m => m.Type == eventType);
 
 							if (eventTypeAlreadyExists)
 								throw new AccountingException(
@@ -610,14 +593,14 @@ namespace Grammophone.Domos.Accounting
 						break;
 				}
 
-				bool moreRecentEventExists = batch.Events.Any(e => e.Time >= utcTime);
+				bool moreRecentEventExists = batch.Messages.Any(e => e.Time >= utcTime);
 
 				if (moreRecentEventExists)
 					throw new AccountingException(
 						$"An more recent event already exists for batch with ID '{batch.ID}'.");
 
-				var batchEvent = this.DomainContainer.FundsTransferBatchEvents.Create();
-				this.DomainContainer.FundsTransferBatchEvents.Add(batchEvent);
+				var batchEvent = this.DomainContainer.FundsTransferBatchMessages.Create();
+				this.DomainContainer.FundsTransferBatchMessages.Add(batchEvent);
 
 				batchEvent.Type = eventType;
 				batchEvent.Batch = batch;
@@ -636,7 +619,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="utcTime">The event time, in UTC.</param>
 		/// <param name="eventType">The type of the event.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
-		/// <param name="collationID">Optional ID of the event collation.</param>
+		/// <param name="batchMessageID">Optional ID of the batch message where the event belongs.</param>
 		/// <param name="responseCode">The optinal response code of the event.</param>
 		/// <param name="traceCode">The optional trace code for the event.</param>
 		/// <param name="comments">Optional comments.</param>
@@ -664,7 +647,7 @@ namespace Grammophone.Domos.Accounting
 			DateTime utcTime,
 			FundsTransferEventType eventType,
 			Func<J, Task> asyncJournalAppendAction = null,
-			Guid? collationID = null,
+			Guid? batchMessageID = null,
 			string responseCode = null,
 			string traceCode = null,
 			string comments = null,
@@ -685,6 +668,17 @@ namespace Grammophone.Domos.Accounting
 					if (batch == null)
 						throw new ArgumentException("The funds transfer request has not been enlisted in a batch.", nameof(request));
 					break;
+			}
+
+			if (batchMessageID.HasValue)
+			{
+				if (batch == null)
+					throw new InvalidOperationException("Non-null batch message ID is specified while there is no batch.");
+
+				bool batchContainsMessage = batch.Messages.Any(m => m.ID == batchMessageID.Value);
+
+				if (!batchContainsMessage)
+					throw new InvalidOperationException("The batch of the request does not contain the specidied message.");
 			}
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
@@ -723,7 +717,7 @@ namespace Grammophone.Domos.Accounting
 				transferEvent.ResponseCode = responseCode;
 				transferEvent.TraceCode = traceCode;
 				transferEvent.Type = eventType;
-				transferEvent.CollationID = collationID;
+				transferEvent.BatchMessageID = batchMessageID;
 				transferEvent.Time = utcTime;
 
 				transferEvent.Request = request;
