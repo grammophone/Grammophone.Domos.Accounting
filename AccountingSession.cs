@@ -13,6 +13,7 @@ using Grammophone.Domos.Domain;
 using Grammophone.Domos.Domain.Accounting;
 using Grammophone.Domos.Domain.Workflow;
 using Grammophone.Setup;
+using Z.EntityFramework.Plus;
 
 namespace Grammophone.Domos.Accounting
 {
@@ -366,6 +367,51 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
+		/// Enroll a set of funds transfer requests into a new <see cref="FundsTransferBatch"/>.
+		/// The requests must not be already under an existing batch.
+		/// </summary>
+		/// <param name="creditSystem">The credit system to be aassigned to the batch.</param>
+		/// <param name="requests">The set of dunds transfer requests.</param>
+		/// <returns>Returns the pending message of the created batch, where the requests are attached.</returns>
+		/// <exception cref="AccountingException">
+		/// Thrown when at least one request is already assigned to a batch.
+		/// </exception>
+		public async Task<FundsTransferBatchMessage> EnrollRequestsIntoBatchAsync(CreditSystem creditSystem, IQueryable<FundsTransferRequest> requests)
+		{
+			if (creditSystem == null) throw new ArgumentNullException(nameof(creditSystem));
+			if (requests == null) throw new ArgumentNullException(nameof(requests));
+
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				bool requestsAlreadyInBatch = await requests.AnyAsync(r => r.Batch != null);
+
+				if (requestsAlreadyInBatch)
+					throw new AccountingException("There is at least one request already in a batch.");
+
+				var pendingBatchMessage = await CreateFundsTransferBatchAsync(creditSystem);
+
+				try
+				{
+					await requests.UpdateAsync(r => new FundsTransferRequest { BatchID = pendingBatchMessage.BatchID });
+
+					var pendingEvents = from e in requests.SelectMany(r => r.Events)
+															where e.Type == FundsTransferEventType.Pending
+															select e;
+
+					await pendingEvents.UpdateAsync(e => new FundsTransferEvent { BatchMessageID = pendingBatchMessage.ID });
+				}
+				catch (SystemException ex) // Tranlation exception is needed for the batch update operations.
+				{
+					throw this.DomainContainer.TranslateException(ex);
+				}
+
+				await transaction.CommitAsync();
+
+				return pendingBatchMessage;
+			}
+		}
+
+		/// <summary>
 		/// Create and persist a <see cref="FundsTransferRequest"/> and record
 		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Pending"/>
 		/// in it.
@@ -547,6 +593,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batch">The <see cref="FundsTransferBatch"/>.</param>
 		/// <param name="eventType">The type of the event.</param>
 		/// <param name="utcTime">The UTC time of the event.</param>
+		/// <param name="eventID">Optional specification of the event ID, else a new GUID will be assigned to it.</param>
 		/// <returns>Returns the created and persisted event.</returns>
 		/// <exception cref="AccountingException">
 		/// Thrown when <paramref name="eventType"/> is <see cref="FundsTransferBatchMessageType.Pending"/>
@@ -557,7 +604,8 @@ namespace Grammophone.Domos.Accounting
 		public async Task<FundsTransferBatchMessage> AddFundsTransferBatchMessageAsync(
 			FundsTransferBatch batch,
 			FundsTransferBatchMessageType eventType,
-			DateTime utcTime)
+			DateTime utcTime,
+			Guid? eventID = null)
 		{
 			if (batch == null) throw new ArgumentNullException(nameof(batch));
 			if (utcTime.Kind != DateTimeKind.Utc) throw new ArgumentException("Time is not UTC.", nameof(utcTime));
@@ -588,6 +636,7 @@ namespace Grammophone.Domos.Accounting
 				var batchEvent = this.DomainContainer.FundsTransferBatchMessages.Create();
 				this.DomainContainer.FundsTransferBatchMessages.Add(batchEvent);
 
+				batchEvent.ID = eventID ?? Guid.NewGuid();
 				batchEvent.Type = eventType;
 				batchEvent.Batch = batch;
 				batchEvent.Time = utcTime;
@@ -878,29 +927,67 @@ namespace Grammophone.Domos.Accounting
 		/// From a set of funds transfer requests, filter those which are pending
 		/// a response.
 		/// </summary>
-		/// <param name="fundsTransferRequestsQuery">The set of requests.</param>
-		/// <param name="includeSubmitted">In the results, include requests which are already submitted.</param>
+		/// <param name="requestsQuery">The set of requests.</param>
+		/// <param name="includeSubmitted">If true, include in the results the requests which are already submitted.</param>
 		/// <returns>Returns the set of filtered requests.</returns>
 		public IQueryable<FundsTransferRequest> FilterPendingFundsTransferRequests(
-			IQueryable<FundsTransferRequest> fundsTransferRequestsQuery,
+			IQueryable<FundsTransferRequest> requestsQuery,
 			bool includeSubmitted = false)
 		{
-			if (fundsTransferRequestsQuery == null) throw new ArgumentNullException(nameof(fundsTransferRequestsQuery));
+			if (requestsQuery == null) throw new ArgumentNullException(nameof(requestsQuery));
 
 			if (includeSubmitted)
 			{
-				return from ftr in fundsTransferRequestsQuery
-							 let lastEventType = ftr.Events.OrderByDescending(e => e.Time).Select(e => e.Type).FirstOrDefault()
-							 where lastEventType == FundsTransferEventType.Pending || lastEventType == FundsTransferEventType.Submitted
-							 select ftr;
+				return FilterFundsTransferRequestsByLatestEvent(
+					requestsQuery,
+					latestEvent => latestEvent.Type == FundsTransferEventType.Pending || latestEvent.Type == FundsTransferEventType.Submitted);
 			}
 			else
 			{
-				return from ftr in fundsTransferRequestsQuery
-							 let lastEventType = ftr.Events.OrderByDescending(e => e.Time).Select(e => e.Type).FirstOrDefault()
-							 where lastEventType == FundsTransferEventType.Pending
-							 select ftr;
+				return FilterFundsTransferRequestsByLatestEvent(
+					requestsQuery,
+					latestEvent => latestEvent.Type == FundsTransferEventType.Pending);
 			}
+		}
+
+		/// <summary>
+		/// From a set of funds transfer requests, filter those whose
+		/// last event matches a predicate.
+		/// </summary>
+		/// <param name="requestsQuery">The set of requests.</param>
+		/// <param name="latestEventPredicate">The predicate to apply to the last event of each request.</param>
+		/// <returns>Returns the set of filtered requests.</returns>
+		public IQueryable<FundsTransferRequest> FilterFundsTransferRequestsByLatestEvent(
+			IQueryable<FundsTransferRequest> requestsQuery,
+			Expression<Func<FundsTransferEvent, bool>> latestEventPredicate)
+		{
+			if (requestsQuery == null) throw new ArgumentNullException(nameof(requestsQuery));
+			if (latestEventPredicate == null) throw new ArgumentNullException(nameof(latestEventPredicate));
+
+			return requestsQuery
+				.Select(r => r.Events.OrderByDescending(e => e.Time).FirstOrDefault())
+				.Where(latestEventPredicate)
+				.Select(e => e.Request);
+		}
+
+		/// <summary>
+		/// From a set of funds transfer batches, filter those whose
+		/// last message matches a predicate.
+		/// </summary>
+		/// <param name="batchesQuery">The set of batches.</param>
+		/// <param name="latestMessagePredicate">The predicate to apply to the last message of each batch.</param>
+		/// <returns>Returns the set of filtered batches.</returns>
+		public IQueryable<FundsTransferBatch> FilterFundsTransferBatchesByLatestMessage(
+			IQueryable<FundsTransferBatch> batchesQuery,
+			Expression<Func<FundsTransferBatchMessage, bool>> latestMessagePredicate)
+		{
+			if (batchesQuery == null) throw new ArgumentNullException(nameof(batchesQuery));
+			if (latestMessagePredicate == null) throw new ArgumentNullException(nameof(latestMessagePredicate));
+
+			return batchesQuery
+				.Select(b => b.Messages.OrderByDescending(m => m.Time).FirstOrDefault())
+				.Where(latestMessagePredicate)
+				.Select(m => m.Batch);
 		}
 
 		#endregion
