@@ -731,7 +731,7 @@ namespace Grammophone.Domos.Accounting
 
 							if (typeIsAlreadyAdded)
 								throw new AccountingException(
-									$"An event of type '{eventType}' already exists for request with transaction ID '{request.TransactionID}'.");
+									$"An event of type '{eventType}' already exists for request with ID '{request.ID}'.");
 
 						}
 						break;
@@ -892,6 +892,69 @@ namespace Grammophone.Domos.Accounting
 					Journal = journal
 				};
 			}
+		}
+
+		/// <summary>
+		/// Add an event for a funds tranfer request.
+		/// </summary>
+		/// <param name="requestID">The ID of the funds tranfer request.</param>
+		/// <param name="utcTime">The event time, in UTC.</param>
+		/// <param name="eventType">The type of the event.</param>
+		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
+		/// <param name="batchMessageID">Optional ID of the batch message where the event belongs.</param>
+		/// <param name="responseCode">The optinal response code of the event.</param>
+		/// <param name="traceCode">The optional trace code for the event.</param>
+		/// <param name="comments">Optional comments.</param>
+		/// <param name="exception">Optional exception to record in the event.</param>
+		/// <returns>
+		/// Returns an action holding the created event
+		/// and optionally any journal executed because of the event.
+		/// </returns>
+		/// <remarks>
+		/// For other event type other than <see cref="FundsTransferEventType.Pending"/>,
+		/// the funds transfer request must have been enlisted under a batch,
+		/// ie its <see cref="FundsTransferRequest.Batch"/> property must not be null.
+		/// </remarks>
+		/// <exception cref="AccountingException">
+		/// Thrown when the request already has an event of the
+		/// given <paramref name="eventType"/>.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		/// Thrown when the event type is other than <see cref="FundsTransferEventType.Pending"/>
+		/// and the request is not enlisted under a batch,
+		/// ie its <see cref="FundsTransferRequest.Batch"/> property is null.
+		/// </exception>
+		/// <exception cref="InvalidOperationException">
+		/// Thrown when no <see cref="FundsTransferRequest"/> exists having ID equal to <paramref name="requestID"/>.
+		/// </exception>
+		public async Task<ActionResult> AddFundsTransferEventAsync(
+			long requestID,
+			DateTime utcTime,
+			FundsTransferEventType eventType,
+			Func<J, Task> asyncJournalAppendAction = null,
+			Guid? batchMessageID = null,
+			string responseCode = null,
+			string traceCode = null,
+			string comments = null,
+			Exception exception = null)
+		{
+			var request = await
+				this.DomainContainer.FundsTransferRequests
+				.Include(r => r.MainAccount)
+				.Include(r => r.EscrowAccount)
+				.Include(r => r.Batch.Messages)
+				.SingleAsync(r => r.ID == requestID);
+
+			return await AddFundsTransferEventAsync(
+				request,
+				utcTime,
+				eventType,
+				asyncJournalAppendAction,
+				batchMessageID,
+				responseCode,
+				traceCode,
+				comments,
+				exception);
 		}
 
 		/// <summary>
