@@ -588,41 +588,41 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
-		/// Record an event for a <see cref="FundsTransferBatch"/>.
+		/// Record a message for a <see cref="FundsTransferBatch"/>.
 		/// </summary>
 		/// <param name="batch">The <see cref="FundsTransferBatch"/>.</param>
-		/// <param name="eventType">The type of the event.</param>
-		/// <param name="utcTime">The UTC time of the event.</param>
-		/// <param name="eventID">Optional specification of the event ID, else a new GUID will be assigned to it.</param>
+		/// <param name="messageType">The type of the message.</param>
+		/// <param name="utcTime">The UTC time of the message.</param>
+		/// <param name="messageID">Optional specification of the message ID, else a new GUID will be assigned to it.</param>
 		/// <returns>Returns the created and persisted event.</returns>
 		/// <exception cref="AccountingException">
-		/// Thrown when <paramref name="eventType"/> is <see cref="FundsTransferBatchMessageType.Pending"/>
+		/// Thrown when <paramref name="messageType"/> is <see cref="FundsTransferBatchMessageType.Pending"/>
 		/// or <see cref="FundsTransferBatchMessageType.Responded"/> and
-		/// there already exists an event with the same type,
-		/// or when a more recent event than <paramref name="utcTime"/> exists.
+		/// there already exists a message with the same type,
+		/// or when a more recent message than <paramref name="utcTime"/> exists.
 		/// </exception>
 		public async Task<FundsTransferBatchMessage> AddFundsTransferBatchMessageAsync(
 			FundsTransferBatch batch,
-			FundsTransferBatchMessageType eventType,
+			FundsTransferBatchMessageType messageType,
 			DateTime utcTime,
-			Guid? eventID = null)
+			Guid? messageID = null)
 		{
 			if (batch == null) throw new ArgumentNullException(nameof(batch));
 			if (utcTime.Kind != DateTimeKind.Utc) throw new ArgumentException("Time is not UTC.", nameof(utcTime));
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
-				switch (eventType)
+				switch (messageType)
 				{
 					// Allow only one event of type Pending or Responded in a batch.
 					case FundsTransferBatchMessageType.Pending:
 					case FundsTransferBatchMessageType.Responded:
 						{
-							bool eventTypeAlreadyExists = batch.Messages.Any(m => m.Type == eventType);
+							bool eventTypeAlreadyExists = batch.Messages.Any(m => m.Type == messageType);
 
 							if (eventTypeAlreadyExists)
 								throw new AccountingException(
-									$"An event of type '{eventType}' already exists for batch with ID '{batch.ID}'.");
+									$"An event of type '{messageType}' already exists for batch with ID '{batch.ID}'.");
 						}
 						break;
 				}
@@ -633,17 +633,17 @@ namespace Grammophone.Domos.Accounting
 					throw new AccountingException(
 						$"An more recent event already exists for batch with ID '{batch.ID}'.");
 
-				var batchEvent = this.DomainContainer.FundsTransferBatchMessages.Create();
-				this.DomainContainer.FundsTransferBatchMessages.Add(batchEvent);
+				var message = this.DomainContainer.FundsTransferBatchMessages.Create();
+				this.DomainContainer.FundsTransferBatchMessages.Add(message);
 
-				batchEvent.ID = eventID ?? Guid.NewGuid();
-				batchEvent.Type = eventType;
-				batchEvent.Batch = batch;
-				batchEvent.Time = utcTime;
+				message.ID = messageID ?? Guid.NewGuid();
+				message.Type = messageType;
+				message.Batch = batch;
+				message.Time = utcTime;
 
 				await transaction.CommitAsync();
 
-				return batchEvent;
+				return message;
 			}
 		}
 
