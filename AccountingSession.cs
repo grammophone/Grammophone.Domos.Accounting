@@ -593,6 +593,8 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batch">The <see cref="FundsTransferBatch"/>.</param>
 		/// <param name="messageType">The type of the message.</param>
 		/// <param name="utcTime">The UTC time of the message.</param>
+		/// <param name="comments">Optional comments to record in the message. Maximum length is <see cref="FundsTransferBatchMessage.CommentsLength"/>.</param>
+		/// <param name="messageCode">Optional code to record inthe message. Maximum length is <see cref="FundsTransferBatchMessage.MessageCodeLength"/>.</param>
 		/// <param name="messageID">Optional specification of the message ID, else a new GUID will be assigned to it.</param>
 		/// <returns>Returns the created and persisted event.</returns>
 		/// <exception cref="AccountingException">
@@ -605,10 +607,18 @@ namespace Grammophone.Domos.Accounting
 			FundsTransferBatch batch,
 			FundsTransferBatchMessageType messageType,
 			DateTime utcTime,
+			string comments = null,
+			string messageCode = null,
 			Guid? messageID = null)
 		{
 			if (batch == null) throw new ArgumentNullException(nameof(batch));
 			if (utcTime.Kind != DateTimeKind.Utc) throw new ArgumentException("Time is not UTC.", nameof(utcTime));
+
+			if (comments != null && comments.Length > FundsTransferBatchMessage.CommentsLength)
+				throw new ArgumentException($"Maximum length for comments is {FundsTransferBatchMessage.CommentsLength}.", nameof(comments));
+
+			if (messageCode != null && messageCode.Length > FundsTransferBatchMessage.MessageCodeLength)
+				throw new ArgumentException($"Maximum length for message code is {FundsTransferBatchMessage.MessageCodeLength}.", nameof(messageCode));
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
@@ -640,6 +650,8 @@ namespace Grammophone.Domos.Accounting
 				message.Type = messageType;
 				message.Batch = batch;
 				message.Time = utcTime;
+				message.Comments = comments;
+				message.MessageCode = messageCode;
 
 				await transaction.CommitAsync();
 
@@ -690,6 +702,15 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (request == null) throw new ArgumentNullException(nameof(request));
 			if (utcTime.Kind != DateTimeKind.Utc) throw new ArgumentException("Time is not UTC.", nameof(utcTime));
+
+			if (responseCode != null && responseCode.Length > FundsTransferEvent.ResponseCodeLength)
+				throw new ArgumentException($"The maximum length for response code is {FundsTransferEvent.ResponseCodeLength}.", nameof(responseCode));
+
+			if (traceCode != null && traceCode.Length > FundsTransferEvent.TraceCodeLength)
+				throw new ArgumentException($"The maximum length for trace code is {FundsTransferEvent.TraceCodeLength}.", nameof(traceCode));
+
+			if (comments != null && comments.Length > FundsTransferEvent.CommentsLength)
+				throw new ArgumentException($"The maximum length for comments is {FundsTransferEvent.CommentsLength}.", nameof(comments));
 
 			var batch = request.Batch;
 
