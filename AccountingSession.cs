@@ -392,13 +392,16 @@ namespace Grammophone.Domos.Accounting
 
 				try
 				{
-					await requests.UpdateAsync(r => new FundsTransferRequest { BatchID = pendingBatchMessage.BatchID });
-
-					var pendingEvents = from e in requests.SelectMany(r => r.Events)
+					// First update the events, otherqise, changing the requests to have a batch renders void the requests query.
+					var pendingEvents = from r in requests
+															from e in r.Events
 															where e.Type == FundsTransferEventType.Pending
 															select e;
 
 					await pendingEvents.UpdateAsync(e => new FundsTransferEvent { BatchMessageID = pendingBatchMessage.ID });
+
+					// Now that the events are updated, safely update the requests to have a batch.
+					await requests.UpdateAsync(r => new FundsTransferRequest { BatchID = pendingBatchMessage.BatchID });
 				}
 				catch (SystemException ex) // Tranlation exception is needed for the batch update operations.
 				{
