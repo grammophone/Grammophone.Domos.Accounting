@@ -1324,7 +1324,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="ownEncryptedBankAccountInfo">An account info to be assigned to the request.</param>
 		/// <param name="amount">The amount of the transfer, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
-		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
+		/// <param name="escrowAccount">The escrow account for withdrawed funds if <paramref name="amount"/> is negative, otherwise ignored.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional ID of the batch.</param>
 		/// <returns>
@@ -1342,7 +1342,7 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
 			if (mainAccount == null) throw new ArgumentNullException(nameof(mainAccount));
-			if (escrowAccount == null) throw new ArgumentNullException(nameof(escrowAccount));
+			if (amount < 0.0M && escrowAccount == null) throw new ArgumentNullException(nameof(escrowAccount));
 			if (amount == 0.0M) throw new ArgumentException("The amount must not be zero.", nameof(amount));
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
@@ -1354,7 +1354,7 @@ namespace Grammophone.Domos.Accounting
 				request.TransactionID = Guid.NewGuid();
 				request.BatchID = batchID;
 				request.MainAccount = mainAccount;
-				request.EscrowAccount = escrowAccount;
+				request.EscrowAccount = amount < 0.0M ? escrowAccount : null; // Escrow is only needed during withdrawal.
 				request.EncryptedBankAccountInfo = ownEncryptedBankAccountInfo;
 
 				this.DomainContainer.FundsTransferRequests.Add(request);
