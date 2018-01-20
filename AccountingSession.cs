@@ -631,20 +631,20 @@ namespace Grammophone.Domos.Accounting
 					case FundsTransferBatchMessageType.Pending:
 					case FundsTransferBatchMessageType.Responded:
 						{
-							bool eventTypeAlreadyExists = batch.Messages.Any(m => m.Type == messageType);
+							bool messageTypeAlreadyExists = batch.Messages.Any(m => m.Type == messageType);
 
-							if (eventTypeAlreadyExists)
+							if (messageTypeAlreadyExists)
 								throw new AccountingException(
-									$"An event of type '{messageType}' already exists for batch with ID '{batch.ID}'.");
+									$"A message of type '{messageType}' already exists for batch with ID '{batch.ID}'.");
 						}
 						break;
 				}
 
-				bool moreRecentEventExists = batch.Messages.Any(e => e.Time >= utcTime);
+				bool moreRecentMessageExists = batch.Messages.Any(e => e.Time >= utcTime);
 
-				if (moreRecentEventExists)
+				if (moreRecentMessageExists)
 					throw new AccountingException(
-						$"An more recent event already exists for batch with ID '{batch.ID}'.");
+						$"An more recent message already exists for batch with ID '{batch.ID}'.");
 
 				var message = this.DomainContainer.FundsTransferBatchMessages.Create();
 				this.DomainContainer.FundsTransferBatchMessages.Add(message);
