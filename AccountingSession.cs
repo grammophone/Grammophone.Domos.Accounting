@@ -420,7 +420,7 @@ namespace Grammophone.Domos.Accounting
 		/// in it.
 		/// </summary>
 		/// <param name="bankAccountInfo">The bank account info to be encrypted and recorded.</param>
-		/// <param name="amount">If positive, the amount to be deposited to the account, else withdrawed.</param>
+		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
@@ -457,7 +457,7 @@ namespace Grammophone.Domos.Accounting
 		/// in it.
 		/// </summary>
 		/// <param name="bankAccountHolder">An entity holding a bank account.</param>
-		/// <param name="amount">If positive, the amount to be deposited to the account, else withdrawed.</param>
+		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
@@ -489,11 +489,13 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
-		/// Request withdrawal from a holder of funds.
+		/// Create and persist a <see cref="FundsTransferRequest"/> and record
+		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Pending"/>
+		/// in it.
 		/// </summary>
-		/// <param name="transferableFundsHolder">The holder of funds.</param>
+		/// <param name="transferableFundsHolder">The holder of funds inside the platform.</param>
 		/// <param name="bankAccountInfo">An account info to be assigned to the request.</param>
-		/// <param name="amount">The amount to withdraw.</param>
+		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <returns>
@@ -521,11 +523,13 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
-		/// Request withdrawal from a holder of funds.
+		/// Create and persist a <see cref="FundsTransferRequest"/> and record
+		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Pending"/>
+		/// in it.
 		/// </summary>
 		/// <param name="transferableFundsHolder">The holder of funds.</param>
 		/// <param name="bankAccountHolder">A holder of a bank account to be assigned to the request.</param>
-		/// <param name="amount">The amount to withdraw.</param>
+		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <returns>
@@ -1322,9 +1326,9 @@ namespace Grammophone.Domos.Accounting
 		/// in it.
 		/// </summary>
 		/// <param name="ownEncryptedBankAccountInfo">An account info to be assigned to the request.</param>
-		/// <param name="amount">The amount of the transfer, positive for deposit, negative for withdrawal.</param>
+		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
-		/// <param name="escrowAccount">The escrow account for withdrawed funds if <paramref name="amount"/> is negative, otherwise ignored.</param>
+		/// <param name="escrowAccount">The escrow account if <paramref name="amount"/> is positive, otherwise ignored.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional ID of the batch.</param>
 		/// <returns>
@@ -1342,7 +1346,7 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
 			if (mainAccount == null) throw new ArgumentNullException(nameof(mainAccount));
-			if (amount < 0.0M && escrowAccount == null) throw new ArgumentNullException(nameof(escrowAccount));
+			if (amount > 0.0M && escrowAccount == null) throw new ArgumentNullException(nameof(escrowAccount));
 			if (amount == 0.0M) throw new ArgumentException("The amount must not be zero.", nameof(amount));
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
@@ -1354,7 +1358,7 @@ namespace Grammophone.Domos.Accounting
 				request.TransactionID = Guid.NewGuid();
 				request.BatchID = batchID;
 				request.MainAccount = mainAccount;
-				request.EscrowAccount = amount < 0.0M ? escrowAccount : null; // Escrow is only needed during withdrawal.
+				request.EscrowAccount = amount > 0.0M ? escrowAccount : null; // Escrow is only needed during withdrawal.
 				request.EncryptedBankAccountInfo = ownEncryptedBankAccountInfo;
 
 				this.DomainContainer.FundsTransferRequests.Add(request);
@@ -1399,7 +1403,7 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		/// <param name="transferableFundsHolder">The holder of funds.</param>
 		/// <param name="ownEncryptedBankAccountInfo">An account info to be assigned to the request.</param>
-		/// <param name="amount">The amount of the transfer, positive for deposit, negative for withdrawal.</param>
+		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <returns>
