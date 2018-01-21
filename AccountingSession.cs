@@ -878,6 +878,7 @@ namespace Grammophone.Domos.Accounting
 							var remittance = CreateRemittanceForJournal(journal, batch.CreditSystemID);
 
 							remittance.Amount = -request.Amount;
+							remittance.TransactionID = request.TransactionID.ToString();
 
 							if (request.Amount > 0.0M)
 							{
