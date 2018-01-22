@@ -997,23 +997,7 @@ namespace Grammophone.Domos.Accounting
 		/// returns the exception, else returns null.
 		/// </returns>
 		public Exception GetFundsTransferEventException(FundsTransferEvent fundsTransferEvent)
-		{
-			if (fundsTransferEvent == null) throw new ArgumentNullException(nameof(fundsTransferEvent));
-
-			if (fundsTransferEvent.ExceptionData != null)
-			{
-				var serializationFormatter = new Serialization.FastBinaryFormatter();
-
-				using (var stream = new System.IO.MemoryStream(fundsTransferEvent.ExceptionData))
-				{
-					return (Exception)serializationFormatter.Deserialize(stream);
-				}
-			}
-			else
-			{
-				return null;
-			}
-		}
+			=> fundsTransferEvent.GetException();
 
 		/// <summary>
 		/// From a set of funds transfer requests, filter those which are pending

@@ -69,6 +69,7 @@
   <ItemGroup>
     <Compile Include="AccountingEncryption.cs" />
     <Compile Include="AccountingException.cs" />
+    <Compile Include="AccountingExtensions.cs" />
     <Compile Include="AccountingMessages.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
