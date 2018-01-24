@@ -878,6 +878,7 @@ namespace Grammophone.Domos.Accounting
 							var remittance = CreateRemittanceForJournal(journal, batch.CreditSystemID);
 
 							remittance.Amount = -request.Amount;
+							remittance.FundsTransferEvent = transferEvent;
 							remittance.TransactionID = request.TransactionID.ToString();
 
 							if (request.Amount > 0.0M)
@@ -1248,6 +1249,7 @@ namespace Grammophone.Domos.Accounting
 			this.DomainContainer.Journals.Add(journal);
 
 			journal.Description = String.Format(AccountingMessages.GENERIC_FUNDS_TRANSFER_JOURNAL, transferEvent.Type);
+			journal.FundsTransferEvent = transferEvent;
 
 			return journal;
 		}
