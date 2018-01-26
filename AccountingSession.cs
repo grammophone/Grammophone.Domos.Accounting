@@ -425,6 +425,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
+		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
@@ -438,6 +439,7 @@ namespace Grammophone.Domos.Accounting
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction,
 			Guid? batchID = null,
+			string requestComments = null,
 			string pendingEventComments = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
@@ -451,6 +453,7 @@ namespace Grammophone.Domos.Accounting
 				escrowAccount,
 				asyncJournalAppendAction,
 				batchID,
+				requestComments,
 				pendingEventComments);
 		}
 
@@ -465,6 +468,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
+		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
@@ -478,6 +482,7 @@ namespace Grammophone.Domos.Accounting
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction,
 			Guid? batchID = null,
+			string requestComments = null,
 			string pendingEventComments = null)
 		{
 			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
@@ -491,6 +496,7 @@ namespace Grammophone.Domos.Accounting
 				escrowAccount,
 				asyncJournalAppendAction,
 				batchID,
+				requestComments,
 				pendingEventComments);
 		}
 
@@ -504,6 +510,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
@@ -516,6 +523,7 @@ namespace Grammophone.Domos.Accounting
 			decimal amount,
 			Func<J, Task> asyncJournalAppendAction,
 			Guid? batchID = null,
+			string requestComments = null,
 			string pendingEventComments = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
@@ -528,6 +536,7 @@ namespace Grammophone.Domos.Accounting
 				amount,
 				asyncJournalAppendAction,
 				batchID,
+				requestComments,
 				pendingEventComments);
 		}
 
@@ -541,6 +550,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
@@ -553,6 +563,7 @@ namespace Grammophone.Domos.Accounting
 			decimal amount,
 			Func<J, Task> asyncJournalAppendAction,
 			Guid? batchID = null,
+			string requestComments = null,
 			string pendingEventComments = null)
 		{
 			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
@@ -565,6 +576,7 @@ namespace Grammophone.Domos.Accounting
 				amount,
 				asyncJournalAppendAction,
 				batchID,
+				requestComments,
 				pendingEventComments);
 		}
 
@@ -575,6 +587,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="amount">The amount to withdraw.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
@@ -586,6 +599,7 @@ namespace Grammophone.Domos.Accounting
 			decimal amount,
 			Func<J, Task> asyncJournalAppendAction,
 			Guid? batchID = null,
+			string requestComments = null,
 			string pendingEventComments = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
@@ -606,6 +620,7 @@ namespace Grammophone.Domos.Accounting
 				amount,
 				asyncJournalAppendAction,
 				batchID,
+				requestComments,
 				pendingEventComments);
 		}
 
@@ -1333,6 +1348,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="escrowAccount">The escrow account if <paramref name="amount"/> is positive, otherwise ignored.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional ID of the batch.</param>
+		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
@@ -1346,6 +1362,7 @@ namespace Grammophone.Domos.Accounting
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction = null,
 			Guid? batchID = null,
+			string requestComments = null,
 			string pendingEventComments = null)
 		{
 			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
@@ -1364,6 +1381,7 @@ namespace Grammophone.Domos.Accounting
 				request.MainAccount = mainAccount;
 				request.EscrowAccount = amount > 0.0M ? escrowAccount : null; // Escrow is only needed during withdrawal.
 				request.EncryptedBankAccountInfo = ownEncryptedBankAccountInfo;
+				request.Comments = requestComments;
 
 				this.DomainContainer.FundsTransferRequests.Add(request);
 
@@ -1411,6 +1429,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
+		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
@@ -1423,6 +1442,7 @@ namespace Grammophone.Domos.Accounting
 			decimal amount,
 			Func<J, Task> asyncJournalAppendAction,
 			Guid? batchID = null,
+			string requestComments = null,
 			string pendingEventComments = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
@@ -1434,6 +1454,7 @@ namespace Grammophone.Domos.Accounting
 				transferableFundsHolder.EscrowAccount,
 				asyncJournalAppendAction,
 				batchID,
+				requestComments,
 				pendingEventComments);
 		}
 
