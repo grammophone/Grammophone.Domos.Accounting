@@ -437,7 +437,7 @@ namespace Grammophone.Domos.Accounting
 			decimal amount,
 			Account mainAccount,
 			Account escrowAccount,
-			Func<J, Task> asyncJournalAppendAction,
+			Func<J, Task> asyncJournalAppendAction = null,
 			Guid? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
@@ -480,7 +480,7 @@ namespace Grammophone.Domos.Accounting
 			decimal amount,
 			Account mainAccount,
 			Account escrowAccount,
-			Func<J, Task> asyncJournalAppendAction,
+			Func<J, Task> asyncJournalAppendAction = null,
 			Guid? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
@@ -521,7 +521,7 @@ namespace Grammophone.Domos.Accounting
 			ITransferableFundsHolder transferableFundsHolder,
 			BankAccountInfo bankAccountInfo,
 			decimal amount,
-			Func<J, Task> asyncJournalAppendAction,
+			Func<J, Task> asyncJournalAppendAction = null,
 			Guid? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
@@ -561,7 +561,7 @@ namespace Grammophone.Domos.Accounting
 			ITransferableFundsHolder transferableFundsHolder,
 			IBankAccountHolder bankAccountHolder,
 			decimal amount,
-			Func<J, Task> asyncJournalAppendAction,
+			Func<J, Task> asyncJournalAppendAction = null,
 			Guid? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
@@ -597,7 +597,7 @@ namespace Grammophone.Domos.Accounting
 		public async Task<ActionResult> CreateFundsTransferRequestAsync(
 			ITransferableFundsHolderWithBankAccount transferableFundsHolder,
 			decimal amount,
-			Func<J, Task> asyncJournalAppendAction,
+			Func<J, Task> asyncJournalAppendAction = null,
 			Guid? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
