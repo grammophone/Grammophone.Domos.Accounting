@@ -1440,7 +1440,7 @@ namespace Grammophone.Domos.Accounting
 			ITransferableFundsHolder transferableFundsHolder,
 			EncryptedBankAccountInfo ownEncryptedBankAccountInfo,
 			decimal amount,
-			Func<J, Task> asyncJournalAppendAction,
+			Func<J, Task> asyncJournalAppendAction = null,
 			Guid? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
