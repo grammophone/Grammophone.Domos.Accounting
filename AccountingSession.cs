@@ -355,7 +355,7 @@ namespace Grammophone.Domos.Accounting
 				var batch = this.DomainContainer.FundsTransferBatches.Create();
 				this.DomainContainer.FundsTransferBatches.Add(batch);
 
-				batch.ID = Guid.NewGuid();
+				batch.GUID = Guid.NewGuid();
 				batch.CreditSystem = creditSystem;
 
 				var batchMessage = await AddFundsTransferBatchMessageAsync(batch, FundsTransferBatchMessageType.Pending, DateTime.UtcNow);
@@ -403,7 +403,7 @@ namespace Grammophone.Domos.Accounting
 					// Now that the events are updated, safely update the requests to have a batch.
 					await requests.UpdateAsync(r => new FundsTransferRequest { BatchID = pendingBatchMessage.BatchID });
 				}
-				catch (SystemException ex) // Tranlation exception is needed for the batch update operations.
+				catch (SystemException ex) // Translation exception is needed for the batch update operations.
 				{
 					throw this.DomainContainer.TranslateException(ex);
 				}
@@ -438,7 +438,7 @@ namespace Grammophone.Domos.Accounting
 			Account mainAccount,
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction = null,
-			Guid? batchID = null,
+			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
 		{
@@ -481,16 +481,14 @@ namespace Grammophone.Domos.Accounting
 			Account mainAccount,
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction = null,
-			Guid? batchID = null,
+			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
 		{
 			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
 
-			var ownEncryptedBankAccountInfo = bankAccountHolder.EncryptedBankAccountInfo.Clone(this.DomainContainer);
-
 			return await CreateFundsTransferRequestAsync(
-				ownEncryptedBankAccountInfo,
+				bankAccountHolder.EncryptedBankAccountInfo,
 				amount,
 				mainAccount,
 				escrowAccount,
@@ -522,7 +520,7 @@ namespace Grammophone.Domos.Accounting
 			BankAccountInfo bankAccountInfo,
 			decimal amount,
 			Func<J, Task> asyncJournalAppendAction = null,
-			Guid? batchID = null,
+			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
 		{
@@ -562,7 +560,7 @@ namespace Grammophone.Domos.Accounting
 			IBankAccountHolder bankAccountHolder,
 			decimal amount,
 			Func<J, Task> asyncJournalAppendAction = null,
-			Guid? batchID = null,
+			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
 		{
@@ -598,7 +596,7 @@ namespace Grammophone.Domos.Accounting
 			ITransferableFundsHolderWithBankAccount transferableFundsHolder,
 			decimal amount,
 			Func<J, Task> asyncJournalAppendAction = null,
-			Guid? batchID = null,
+			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
 		{
@@ -1338,11 +1336,47 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
+		/// Get, or create if it does not exit, a <see cref="FundsTransferRequestGroup"/> for the
+		/// supplied encrypted banking info.
+		/// </summary>
+		/// <param name="encryptedBankAccountInfo">The encrypted banking info.</param>
+		/// <returns>Returns the requested group.</returns>
+		private async Task<FundsTransferRequestGroup> GetOrCreateFundsTransferRequestGroupAsync(EncryptedBankAccountInfo encryptedBankAccountInfo)
+		{
+			if (encryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(encryptedBankAccountInfo));
+
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				var groupQuery = from g in this.DomainContainer.FundsTransferRequestGroups
+												 where g.EncryptedBankAccountInfo == encryptedBankAccountInfo
+												 select g;
+
+				var group = await groupQuery.SingleOrDefaultAsync();
+
+				if (group != null)
+				{
+					transaction.Pass();
+
+					return group;
+				}
+
+				group = this.DomainContainer.FundsTransferRequestGroups.Create();
+				this.DomainContainer.FundsTransferRequestGroups.Add(group);
+
+				group.EncryptedBankAccountInfo = encryptedBankAccountInfo.Clone(this.DomainContainer);
+
+				await transaction.CommitAsync();
+
+				return group;
+			}
+		}
+
+		/// <summary>
 		/// Create and persist a <see cref="FundsTransferRequest"/> and record
 		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Pending"/>
 		/// in it.
 		/// </summary>
-		/// <param name="ownEncryptedBankAccountInfo">An account info to be assigned to the request.</param>
+		/// <param name="εncryptedBankAccountInfo">An account info to be assigned to the request.</param>
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="escrowAccount">The escrow account if <paramref name="amount"/> is positive, otherwise ignored.</param>
@@ -1356,16 +1390,16 @@ namespace Grammophone.Domos.Accounting
 		/// if the <paramref name="amount"/> is positive.
 		/// </returns>
 		private async Task<ActionResult> CreateFundsTransferRequestAsync(
-			EncryptedBankAccountInfo ownEncryptedBankAccountInfo,
+			EncryptedBankAccountInfo εncryptedBankAccountInfo,
 			decimal amount,
 			Account mainAccount,
 			Account escrowAccount,
 			Func<J, Task> asyncJournalAppendAction = null,
-			Guid? batchID = null,
+			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
 		{
-			if (ownEncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(ownEncryptedBankAccountInfo));
+			if (εncryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(εncryptedBankAccountInfo));
 			if (mainAccount == null) throw new ArgumentNullException(nameof(mainAccount));
 			if (amount > 0.0M && escrowAccount == null) throw new ArgumentNullException(nameof(escrowAccount));
 			if (amount == 0.0M) throw new ArgumentException("The amount must not be zero.", nameof(amount));
@@ -1380,7 +1414,7 @@ namespace Grammophone.Domos.Accounting
 				request.BatchID = batchID;
 				request.MainAccount = mainAccount;
 				request.EscrowAccount = amount > 0.0M ? escrowAccount : null; // Escrow is only needed during withdrawal.
-				request.EncryptedBankAccountInfo = ownEncryptedBankAccountInfo;
+				request.Group = await GetOrCreateFundsTransferRequestGroupAsync(εncryptedBankAccountInfo);
 				request.Comments = requestComments;
 
 				this.DomainContainer.FundsTransferRequests.Add(request);
@@ -1425,7 +1459,7 @@ namespace Grammophone.Domos.Accounting
 		/// Create a funds transfer request.
 		/// </summary>
 		/// <param name="transferableFundsHolder">The holder of funds.</param>
-		/// <param name="ownEncryptedBankAccountInfo">An account info to be assigned to the request.</param>
+		/// <param name="encryptedBankAccountInfo">An account info to be assigned to the request.</param>
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
@@ -1438,17 +1472,17 @@ namespace Grammophone.Domos.Accounting
 		/// </returns>
 		private async Task<ActionResult> CreateFundsTransferRequestAsync(
 			ITransferableFundsHolder transferableFundsHolder,
-			EncryptedBankAccountInfo ownEncryptedBankAccountInfo,
+			EncryptedBankAccountInfo encryptedBankAccountInfo,
 			decimal amount,
 			Func<J, Task> asyncJournalAppendAction = null,
-			Guid? batchID = null,
+			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 
 			return await CreateFundsTransferRequestAsync(
-				ownEncryptedBankAccountInfo,
+				encryptedBankAccountInfo,
 				amount,
 				transferableFundsHolder.MainAccount,
 				transferableFundsHolder.EscrowAccount,
