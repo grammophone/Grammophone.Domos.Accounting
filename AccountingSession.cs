@@ -709,7 +709,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="utcTime">The event time, in UTC.</param>
 		/// <param name="eventType">The type of the event.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
-		/// <param name="batchMessageID">Optional ID of the batch message where the event belongs.</param>
+		/// <param name="batchMessage">Optional batch message where the event belongs.</param>
 		/// <param name="responseCode">The optinal response code of the event.</param>
 		/// <param name="traceCode">The optional trace code for the event.</param>
 		/// <param name="comments">Optional comments. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
@@ -737,7 +737,7 @@ namespace Grammophone.Domos.Accounting
 			DateTime utcTime,
 			FundsTransferEventType eventType,
 			Func<J, Task> asyncJournalAppendAction = null,
-			long? batchMessageID = null,
+			FundsTransferBatchMessage batchMessage = null,
 			string responseCode = null,
 			string traceCode = null,
 			string comments = null,
@@ -767,17 +767,6 @@ namespace Grammophone.Domos.Accounting
 					if (batch == null)
 						throw new ArgumentException("The funds transfer request has not been enlisted in a batch.", nameof(request));
 					break;
-			}
-
-			if (batchMessageID.HasValue)
-			{
-				if (batch == null)
-					throw new InvalidOperationException("Non-null batch message ID is specified while there is no batch.");
-
-				bool batchContainsMessage = batch.Messages.Any(m => m.ID == batchMessageID.Value);
-
-				if (!batchContainsMessage)
-					throw new InvalidOperationException("The batch of the request does not contain the specidied message.");
 			}
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
@@ -816,7 +805,7 @@ namespace Grammophone.Domos.Accounting
 				transferEvent.ResponseCode = responseCode;
 				transferEvent.TraceCode = traceCode;
 				transferEvent.Type = eventType;
-				transferEvent.BatchMessageID = batchMessageID;
+				transferEvent.BatchMessage = batchMessage;
 				transferEvent.Time = utcTime;
 
 				transferEvent.Request = request;
@@ -967,7 +956,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="utcTime">The event time, in UTC.</param>
 		/// <param name="eventType">The type of the event.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
-		/// <param name="batchMessageID">Optional ID of the batch message where the event belongs.</param>
+		/// <param name="batchMessage">Optional batch message where the event belongs.</param>
 		/// <param name="responseCode">The optinal response code of the event.</param>
 		/// <param name="traceCode">The optional trace code for the event.</param>
 		/// <param name="comments">Optional comments.</param>
@@ -998,7 +987,7 @@ namespace Grammophone.Domos.Accounting
 			DateTime utcTime,
 			FundsTransferEventType eventType,
 			Func<J, Task> asyncJournalAppendAction = null,
-			long? batchMessageID = null,
+			FundsTransferBatchMessage batchMessage = null,
 			string responseCode = null,
 			string traceCode = null,
 			string comments = null,
@@ -1016,7 +1005,7 @@ namespace Grammophone.Domos.Accounting
 				utcTime,
 				eventType,
 				asyncJournalAppendAction,
-				batchMessageID,
+				batchMessage,
 				responseCode,
 				traceCode,
 				comments,
@@ -1435,7 +1424,7 @@ namespace Grammophone.Domos.Accounting
 
 				this.DomainContainer.FundsTransferRequests.Add(request);
 
-				long? pendingBatchMessageID = null;
+				FundsTransferBatchMessage pendingBatchMessage = null;
 
 				if (batchID.HasValue)
 				{
@@ -1449,12 +1438,10 @@ namespace Grammophone.Domos.Accounting
 
 					request.Batch = batch;
 
-					var pendingBatchMessage = batch.Messages.SingleOrDefault(m => m.Type == FundsTransferBatchMessageType.Pending);
+					pendingBatchMessage = batch.Messages.SingleOrDefault(m => m.Type == FundsTransferBatchMessageType.Pending);
 
 					if (pendingBatchMessage == null)
 						throw new AccountingException("There is no 'Pending' message for the batch.");
-
-					pendingBatchMessageID = pendingBatchMessage.ID;
 				}
 
 				var queueEvent = await AddFundsTransferEventAsync(
@@ -1462,7 +1449,7 @@ namespace Grammophone.Domos.Accounting
 					DateTime.UtcNow, 
 					FundsTransferEventType.Pending,
 					asyncJournalAppendAction,
-					pendingBatchMessageID,
+					pendingBatchMessage,
 					pendingEventComments);
 
 				await transaction.CommitAsync();
