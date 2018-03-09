@@ -1422,6 +1422,7 @@ namespace Grammophone.Domos.Accounting
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
 				var request = this.DomainContainer.FundsTransferRequests.Create();
+				this.DomainContainer.FundsTransferRequests.Add(request);
 
 				request.Amount = amount;
 				request.State = FundsTransferState.Pending;
@@ -1431,8 +1432,6 @@ namespace Grammophone.Domos.Accounting
 				request.EscrowAccount = amount > 0.0M ? escrowAccount : null; // Escrow is only needed during withdrawal.
 				request.Group = await GetOrCreateFundsTransferRequestGroupAsync(encryptedBankAccountInfo, bankAccountHolderName);
 				request.Comments = requestComments;
-
-				this.DomainContainer.FundsTransferRequests.Add(request);
 
 				long? pendingBatchMessageID = null;
 
