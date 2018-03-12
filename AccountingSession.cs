@@ -670,9 +670,8 @@ namespace Grammophone.Domos.Accounting
 			{
 				switch (messageType)
 				{
-					// Allow only one event of type Pending or Responded in a batch.
+					// Allow only one event of type Pending in a batch.
 					case FundsTransferBatchMessageType.Pending:
-					case FundsTransferBatchMessageType.Responded:
 						{
 							bool messageTypeAlreadyExists = batch.Messages.Any(m => m.Type == messageType);
 
