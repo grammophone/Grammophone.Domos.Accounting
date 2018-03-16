@@ -1166,7 +1166,7 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
-		/// Ensures that no account will fall to negative balance
+		/// Ensures that no account will fall to negative balance or move further into negative balance
 		/// after the execution of the journal.
 		/// </summary>
 		/// <param name="journal">The journal to test.</param>
@@ -1180,12 +1180,12 @@ namespace Grammophone.Domos.Accounting
 
 			IReadOnlyDictionary<Account, decimal> futureBalancesByAccount = PredictAccountBalances(journal);
 
-			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M))
+			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M && entry.Value < entry.Key.Balance))
 				throw new NegativeBalanceException(futureBalancesByAccount);
 		}
 
 		/// <summary>
-		/// Ensures that no account will fall to negative balance
+		/// Ensures that no account will fall to negative balance or move further into negative balance
 		/// after the execution of the journal.
 		/// </summary>
 		/// <param name="journal">The journal to test.</param>
@@ -1203,7 +1203,7 @@ namespace Grammophone.Domos.Accounting
 
 			IReadOnlyDictionary<Account, decimal> futureBalancesByAccount = PredictAccountBalances(journal);
 
-			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M && accountPredicate(entry.Key)))
+			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M && entry.Value < entry.Key.Balance && accountPredicate(entry.Key)))
 				throw new NegativeBalanceException(futureBalancesByAccount);
 		}
 
