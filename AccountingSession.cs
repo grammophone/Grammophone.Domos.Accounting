@@ -845,7 +845,7 @@ namespace Grammophone.Domos.Accounting
 						{
 							journal = CreateJournalForFundsTransferEvent(transferEvent);
 
-							journal.Description = AccountingMessages.WITHDRAWAL_ESCROW_DESCRIPTION;
+							journal.Description = AccountingMessages.WITHDRAWAL_TRANSFER_DESCRIPTION;
 
 							P moveFromMainAccountPosting = CreatePostingForJournal(journal);
 
@@ -857,7 +857,7 @@ namespace Grammophone.Domos.Accounting
 
 							moveToTransferAccountPosting.Amount = request.Amount;
 							moveToTransferAccountPosting.Account = request.TransferAccount;
-							moveToTransferAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_TO_ESCROW_ACCOUNT;
+							moveToTransferAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_TO_TRANSFER_ACCOUNT;
 						}
 						break;
 
@@ -883,7 +883,7 @@ namespace Grammophone.Domos.Accounting
 
 							moveFromTransferAccountPosting.Amount = -request.Amount;
 							moveFromTransferAccountPosting.Account = request.TransferAccount;
-							moveFromTransferAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_FROM_ESCROW_ACCOUNT;
+							moveFromTransferAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_FROM_TRANSFER_ACCOUNT;
 
 							P moveToMainAccountPosting = CreatePostingForJournal(journal);
 
@@ -911,7 +911,7 @@ namespace Grammophone.Domos.Accounting
 							if (request.Amount > 0.0M)
 							{
 								remittance.Account = request.TransferAccount;
-								remittance.Description = AccountingMessages.DEPLETE_ESCROW_ACCOUNT;
+								remittance.Description = AccountingMessages.DEPLETE_TRANSFER_ACCOUNT;
 							}
 							else
 							{

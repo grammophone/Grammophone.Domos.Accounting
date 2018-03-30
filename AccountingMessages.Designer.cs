@@ -19,7 +19,7 @@ namespace Grammophone.Domos.Accounting {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class AccountingMessages {
@@ -61,11 +61,11 @@ namespace Grammophone.Domos.Accounting {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Deplete the escrow account upon transfer success..
+        ///   Looks up a localized string similar to Deplete the outgoing transfer account upon remittance success..
         /// </summary>
-        internal static string DEPLETE_ESCROW_ACCOUNT {
+        internal static string DEPLETE_TRANSFER_ACCOUNT {
             get {
-                return ResourceManager.GetString("DEPLETE_ESCROW_ACCOUNT", resourceCulture);
+                return ResourceManager.GetString("DEPLETE_TRANSFER_ACCOUNT", resourceCulture);
             }
         }
         
@@ -115,15 +115,6 @@ namespace Grammophone.Domos.Accounting {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Move refunded amount from escrow account..
-        /// </summary>
-        internal static string MOVE_AMOUNT_FROM_ESCROW_ACCOUNT {
-            get {
-                return ResourceManager.GetString("MOVE_AMOUNT_FROM_ESCROW_ACCOUNT", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Move withdrawn amount from main account..
         /// </summary>
         internal static string MOVE_AMOUNT_FROM_MAIN_ACCOUNT {
@@ -133,11 +124,11 @@ namespace Grammophone.Domos.Accounting {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Move withdrawn amount to escrow account..
+        ///   Looks up a localized string similar to Move refunded amount from outgoing transfer account..
         /// </summary>
-        internal static string MOVE_AMOUNT_TO_ESCROW_ACCOUNT {
+        internal static string MOVE_AMOUNT_FROM_TRANSFER_ACCOUNT {
             get {
-                return ResourceManager.GetString("MOVE_AMOUNT_TO_ESCROW_ACCOUNT", resourceCulture);
+                return ResourceManager.GetString("MOVE_AMOUNT_FROM_TRANSFER_ACCOUNT", resourceCulture);
             }
         }
         
@@ -147,6 +138,15 @@ namespace Grammophone.Domos.Accounting {
         internal static string MOVE_AMOUNT_TO_MAIN_ACCOUNT {
             get {
                 return ResourceManager.GetString("MOVE_AMOUNT_TO_MAIN_ACCOUNT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Move withdrawn amount to outgoung transfer account..
+        /// </summary>
+        internal static string MOVE_AMOUNT_TO_TRANSFER_ACCOUNT {
+            get {
+                return ResourceManager.GetString("MOVE_AMOUNT_TO_TRANSFER_ACCOUNT", resourceCulture);
             }
         }
         
@@ -178,11 +178,11 @@ namespace Grammophone.Domos.Accounting {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Move withdrawed funds to escrow..
+        ///   Looks up a localized string similar to Move withdrawed funds to outgoing transfer account..
         /// </summary>
-        internal static string WITHDRAWAL_ESCROW_DESCRIPTION {
+        internal static string WITHDRAWAL_TRANSFER_DESCRIPTION {
             get {
-                return ResourceManager.GetString("WITHDRAWAL_ESCROW_DESCRIPTION", resourceCulture);
+                return ResourceManager.GetString("WITHDRAWAL_TRANSFER_DESCRIPTION", resourceCulture);
             }
         }
     }
