@@ -423,7 +423,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="bankAccountHolderName">The name of the holder of the bank account.</param>
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
-		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
+		/// <param name="transferAccount">The transfer account for outgoing funds, if <paramref name="amount"/> is positive, otherwise ignored.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
@@ -438,7 +438,7 @@ namespace Grammophone.Domos.Accounting
 			string bankAccountHolderName,
 			decimal amount,
 			Account mainAccount,
-			Account escrowAccount,
+			Account transferAccount,
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
@@ -454,7 +454,7 @@ namespace Grammophone.Domos.Accounting
 				bankAccountHolderName,
 				amount,
 				mainAccount,
-				escrowAccount,
+				transferAccount,
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
@@ -469,7 +469,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="bankAccountHolder">An entity holding a bank account.</param>
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
-		/// <param name="escrowAccount">The escrow account for holding outgoing funds.</param>
+		/// <param name="transferAccount">The transfer account for outgoing funds, if <paramref name="amount"/> is positive, otherwise ignored.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
@@ -483,7 +483,7 @@ namespace Grammophone.Domos.Accounting
 			IBankAccountHolder bankAccountHolder,
 			decimal amount,
 			Account mainAccount,
-			Account escrowAccount,
+			Account transferAccount,
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
@@ -496,7 +496,7 @@ namespace Grammophone.Domos.Accounting
 				bankAccountHolder.GetBankAccountHolderName(),
 				amount,
 				mainAccount,
-				escrowAccount,
+				transferAccount,
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
@@ -853,11 +853,11 @@ namespace Grammophone.Domos.Accounting
 							moveFromMainAccountPosting.Account = request.MainAccount;
 							moveFromMainAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_FROM_MAIN_ACCOUNT;
 
-							P moveToEscrowAccountPosting = CreatePostingForJournal(journal);
+							P moveToTransferAccountPosting = CreatePostingForJournal(journal);
 
-							moveToEscrowAccountPosting.Amount = request.Amount;
-							moveToEscrowAccountPosting.Account = request.EscrowAccount;
-							moveToEscrowAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_TO_ESCROW_ACCOUNT;
+							moveToTransferAccountPosting.Amount = request.Amount;
+							moveToTransferAccountPosting.Account = request.TransferAccount;
+							moveToTransferAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_TO_ESCROW_ACCOUNT;
 						}
 						break;
 
@@ -879,11 +879,11 @@ namespace Grammophone.Domos.Accounting
 
 							journal.Description = AccountingMessages.REFUND_FAILED_TRANSFER;
 
-							P moveFromEscrowAccountPosting = CreatePostingForJournal(journal);
+							P moveFromTransferAccountPosting = CreatePostingForJournal(journal);
 
-							moveFromEscrowAccountPosting.Amount = -request.Amount;
-							moveFromEscrowAccountPosting.Account = request.EscrowAccount;
-							moveFromEscrowAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_FROM_ESCROW_ACCOUNT;
+							moveFromTransferAccountPosting.Amount = -request.Amount;
+							moveFromTransferAccountPosting.Account = request.TransferAccount;
+							moveFromTransferAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_FROM_ESCROW_ACCOUNT;
 
 							P moveToMainAccountPosting = CreatePostingForJournal(journal);
 
@@ -910,7 +910,7 @@ namespace Grammophone.Domos.Accounting
 
 							if (request.Amount > 0.0M)
 							{
-								remittance.Account = request.EscrowAccount;
+								remittance.Account = request.TransferAccount;
 								remittance.Description = AccountingMessages.DEPLETE_ESCROW_ACCOUNT;
 							}
 							else
@@ -998,7 +998,7 @@ namespace Grammophone.Domos.Accounting
 			var request = await
 				this.DomainContainer.FundsTransferRequests
 				.Include(r => r.MainAccount)
-				.Include(r => r.EscrowAccount)
+				.Include(r => r.TransferAccount)
 				.Include(r => r.Batch.Messages)
 				.SingleAsync(r => r.ID == requestID);
 
@@ -1391,7 +1391,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="bankAccountHolderName">The name of the holder of the bank account.</param>
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
-		/// <param name="escrowAccount">The escrow account if <paramref name="amount"/> is positive, otherwise ignored.</param>
+		/// <param name="transferAccount">The transfer account for outgoing funds, if <paramref name="amount"/> is positive, otherwise ignored.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional ID of the batch.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
@@ -1406,7 +1406,7 @@ namespace Grammophone.Domos.Accounting
 			string bankAccountHolderName,
 			decimal amount,
 			Account mainAccount,
-			Account escrowAccount,
+			Account transferAccount,
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
@@ -1415,7 +1415,7 @@ namespace Grammophone.Domos.Accounting
 			if (encryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(encryptedBankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
 			if (mainAccount == null) throw new ArgumentNullException(nameof(mainAccount));
-			if (amount > 0.0M && escrowAccount == null) throw new ArgumentNullException(nameof(escrowAccount));
+			if (amount > 0.0M && transferAccount == null) throw new ArgumentNullException(nameof(transferAccount));
 			if (amount == 0.0M) throw new ArgumentException("The amount must not be zero.", nameof(amount));
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
@@ -1428,7 +1428,7 @@ namespace Grammophone.Domos.Accounting
 				request.GUID = Guid.NewGuid();
 				request.BatchID = batchID;
 				request.MainAccount = mainAccount;
-				request.EscrowAccount = amount > 0.0M ? escrowAccount : null; // Escrow is only needed during withdrawal.
+				request.TransferAccount = amount > 0.0M ? transferAccount : null; // Transfer is only needed during withdrawal.
 				request.Group = await GetOrCreateFundsTransferRequestGroupAsync(encryptedBankAccountInfo, bankAccountHolderName);
 				request.Comments = requestComments;
 
@@ -1502,7 +1502,7 @@ namespace Grammophone.Domos.Accounting
 				bankAccountHolderName,
 				amount,
 				transferableFundsHolder.MainAccount,
-				transferableFundsHolder.EscrowAccount,
+				transferableFundsHolder.TransferAccount,
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
