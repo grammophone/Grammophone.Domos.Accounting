@@ -1511,4 +1511,163 @@ namespace Grammophone.Domos.Accounting
 
 		#endregion
 	}
+
+	/// <summary>
+	/// An <see cref="IDisposable"/> session for accounting actions. 
+	/// CAUTION: All actions taking entities as parameters
+	/// should have the entities connected via the <see cref="AccountingSession{U, BST, P, R, J, D}.DomainContainer"/> of the class.
+	/// </summary>
+	/// <typeparam name="U">
+	/// The type of users, derived from <see cref="User"/>.
+	/// </typeparam>
+	/// <typeparam name="BST">
+	/// The base type of state transitions, derived from <see cref="StateTransition{U}"/>.
+	/// </typeparam>
+	/// <typeparam name="P">The type of the postings, derived from <see cref="Posting{U}"/>.</typeparam>
+	/// <typeparam name="R">The type of remittances, derived from <see cref="Remittance{U}"/>.</typeparam>
+	/// <typeparam name="J">
+	/// The type of accounting journals, derived from <see cref="Journal{U, ST, P, R}"/>.
+	/// </typeparam>
+	/// <typeparam name="ILTC">The type of invoice line tax components, derived from <see cref="InvoiceLineTaxComponent{U, P, R}"/>.</typeparam>
+	/// <typeparam name="IL">The type of invoice line, derived from <see cref="InvoiceLine{U, P, R, ILTC}"/>.</typeparam>
+	/// <typeparam name="IE">The type of invoice event, derived from <see cref="InvoiceEvent{U, P, R}"/>.</typeparam>
+	/// <typeparam name="I">The type of invoices, derived from <see cref="Invoice{U, P, R, ILTC, IL, IE}"/>.</typeparam>
+	/// <typeparam name="D">The type of domain container for entities.</typeparam>
+	public class AccountingSession<U, BST, P, R, J, ILTC, IL, IE, I, D> : AccountingSession<U, BST, P, R, J, D>
+		where U : User
+		where BST : StateTransition<U>
+		where P : Posting<U>
+		where R : Remittance<U>
+		where J : Journal<U, BST, P, R>
+		where ILTC : InvoiceLineTaxComponent<U, P, R>
+		where IL : InvoiceLine<U, P, R, ILTC>
+		where IE : InvoiceEvent<U, P, R>
+		where I : Invoice<U, P, R, ILTC, IL, IE>
+		where D : IDomosDomainContainer<U, BST, P, R, J, ILTC, IL, IE, I>
+	{
+		#region Construction
+
+		/// <summary>
+		/// Create.
+		/// If the <paramref name="domainContainer"/> does not 
+		/// have a <see cref="IUserTrackingEntityListener"/>,
+		/// it will be given one in which the <paramref name="agent"/> will be 
+		/// the acting user.
+		/// </summary>
+		/// <param name="configurationSectionName">The element name of a Unity configuration section.</param>
+		/// <param name="domainContainer">The entities domain container.</param>
+		/// <param name="agent">The acting user.</param>
+		public AccountingSession(string configurationSectionName, D domainContainer, U agent)
+			: base(configurationSectionName, domainContainer, agent)
+		{
+		}
+
+		/// <summary>
+		/// Create.
+		/// If the <paramref name="domainContainer"/> does not 
+		/// have a <see cref="IUserTrackingEntityListener"/>,
+		/// it will be given one in which agent specified by <paramref name="agentPickPredicate"/>
+		/// will be the acting user.
+		/// </summary>
+		/// <param name="configurationSectionName">The element name of a Unity configuration section.</param>
+		/// <param name="domainContainer">The entities domain container.</param>
+		/// <param name="agentPickPredicate">A predicate to select a user.</param>
+		public AccountingSession(string configurationSectionName, D domainContainer, Expression<Func<U, bool>> agentPickPredicate)
+			: base(configurationSectionName, domainContainer, agentPickPredicate)
+		{
+		}
+
+		/// <summary>
+		/// Create using an own <see cref="AccountingSession{U, BST, P, R, J, D}.DomainContainer"/>
+		/// specified in <see cref="Settings"/>.
+		/// </summary>
+		/// <param name="configurationSectionName">The element name of a Unity configuration section.</param>
+		/// <param name="agentPickPredicate">A predicate to select a user.</param>
+		public AccountingSession(string configurationSectionName, Expression<Func<U, bool>> agentPickPredicate)
+			: base(configurationSectionName, agentPickPredicate)
+		{
+		}
+
+		#endregion
+
+		#region Public methods
+
+		/// <summary>
+		/// Filter a set of invoices by applying a predicate on their last invoice event.
+		/// </summary>
+		/// <param name="invoices">The set of invoices to filter.</param>
+		/// <param name="invoiceEventPredicate">The predicate to be applied on each invoice's last event.</param>
+		/// <returns>Returns the filtered set of invoices.</returns>
+		public IQueryable<I> FilterInvoicesByLastEvent(IQueryable<I> invoices, Expression<Func<IE, bool>> invoiceEventPredicate)
+		{
+			if (invoices == null) throw new ArgumentNullException(nameof(invoices));
+			if (invoiceEventPredicate == null) throw new ArgumentNullException(nameof(invoiceEventPredicate));
+
+			return invoices
+				.Select(i => i.Events.OrderByDescending(ie => ie.Time).FirstOrDefault()) // Select the last events
+				.Where(invoiceEventPredicate) // Filter the last events by the predicate
+				.Join(this.DomainContainer.Invoices, ie => ie.InvoiceID, i => i.ID, (ie, i) => i); // Join the invoices corresponding to the filtered last events.
+		}
+
+		/// <summary>
+		/// Add an event to an invoice.
+		/// </summary>
+		/// <param name="invoice">The invoice.</param>
+		/// <param name="invoiceEvent">The event to add to the invoice.</param>
+		/// <exception cref="AccountingException">Thrown when previous events of the invoice are incompatible to the added event.</exception>
+		public async Task AddEventToInvoiceAsync(I invoice, IE invoiceEvent)
+		{
+			if (invoice == null) throw new ArgumentNullException(nameof(invoice));
+
+			await AddEventToInvoiceAsync(invoice.ID, invoiceEvent);
+		}
+
+		/// <summary>
+		/// Add an event to an invoice.
+		/// </summary>
+		/// <param name="invoiceID">The ID of the invoice.</param>
+		/// <param name="invoiceEvent">The event to add to the invoice.</param>
+		/// <exception cref="AccountingException">Thrown when previous events of the invoice are incompatible to the added event.</exception>
+		public async Task AddEventToInvoiceAsync(long invoiceID, IE invoiceEvent)
+		{
+			if (invoiceEvent == null) throw new ArgumentNullException(nameof(invoiceEvent));
+
+			var lastInvoiceEventQuery = from i in this.DomainContainer.Invoices
+																	where i.ID == invoiceID
+																	let le = i.Events.OrderByDescending(e => e.Time).FirstOrDefault()
+																	select le;
+
+			var lastInvoiceEvent = await lastInvoiceEventQuery.SingleOrDefaultAsync();
+
+			if (lastInvoiceEvent != null)
+			{
+				if (lastInvoiceEvent.Time >= invoiceEvent.Time)
+					throw new AccountingException("The invoice being added has Time property less than the last event of the invoice.");
+
+				switch (lastInvoiceEvent.InvoiceState)
+				{
+					case InvoiceState.PartiallyPaid:
+						if (invoiceEvent.InvoiceState < lastInvoiceEvent.InvoiceState)
+							throw new AccountingException($"The new event must have at least state {InvoiceState.PartiallyPaid} or higher.");
+
+						break;
+
+					case InvoiceState.Paid:
+						throw new AccountingException("The invoice is already fully paid. No new invoice event is acceptable.");
+
+					default:
+						if (invoiceEvent.InvoiceState <= lastInvoiceEvent.InvoiceState)
+							throw new AccountingException($"The new event must have at state higher than {lastInvoiceEvent.InvoiceState} or higher.");
+						break;
+				}
+			}
+
+			this.DomainContainer.InvoiceEvents.Add(invoiceEvent);
+			invoiceEvent.InvoiceID = invoiceID;
+
+			await this.DomainContainer.SaveChangesAsync();
+		}
+
+		#endregion
+	}
 }
