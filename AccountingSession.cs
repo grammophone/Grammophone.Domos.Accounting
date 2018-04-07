@@ -1592,6 +1592,79 @@ namespace Grammophone.Domos.Accounting
 
 		#region Public methods
 
+		#region Invoices
+
+		/// <summary>
+		/// Delete an invoice with all its lines and tax components. Must not have any events recorded.
+		/// </summary>
+		/// <param name="invoiceID">The ID of the invoice to delete.</param>
+		/// <returns>Returns true if the invoice was found and deleted, else false.</returns>
+		/// <exception cref="AccountingException">Thrown if the invoice has events recorded.</exception>
+		public async Task<bool> DeleteInvoiceAsync(long invoiceID)
+		{
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				try
+				{
+					bool invoiceExists = await this.DomainContainer.Invoices.AnyAsync(i => i.ID == invoiceID);
+
+					if (!invoiceExists)
+					{
+						transaction.Pass();
+
+						return false;
+					}
+
+					bool eventsExist = await this.DomainContainer.InvoiceEvents.AnyAsync(ie => ie.InvoiceID == invoiceID);
+
+					if (eventsExist)
+						throw new AccountingException($"The invoice with ID {invoiceID} cannot be deleted because it has events recorded.");
+
+					var taxComponentsQuery = from tc in this.DomainContainer.InvoiceLineTaxComponents
+																	 join l in this.DomainContainer.InvoiceLines on tc.LineID equals l.ID
+																	 where l.InvoiceID == invoiceID
+																	 select tc;
+
+					await taxComponentsQuery.DeleteAsync();
+
+					var linesQuery = from l in this.DomainContainer.InvoiceLines
+													 where l.InvoiceID == invoiceID
+													 select l;
+
+					await linesQuery.DeleteAsync();
+
+					var invoiceQuery = from i in this.DomainContainer.Invoices
+														 where i.ID == invoiceID
+														 select i;
+
+					await invoiceQuery.DeleteAsync();
+
+					await transaction.CommitAsync();
+
+					return true;
+				}
+				catch (SystemException ex)
+				{
+					throw this.DomainContainer.TranslateException(ex);
+				}
+			}
+		}
+
+		/// <summary>
+		/// Add an invoice. Can contain lines and tax components.
+		/// </summary>
+		/// <param name="invoice">The invoice to add.</param>
+		public async Task AddInvooiceasync(I invoice)
+		{
+			this.DomainContainer.Invoices.Add(invoice);
+
+			await this.DomainContainer.SaveChangesAsync();
+		}
+
+		#endregion
+
+		#region Invoice events
+
 		/// <summary>
 		/// Filter a set of invoices by applying a predicate on their last invoice event.
 		/// </summary>
@@ -1605,6 +1678,7 @@ namespace Grammophone.Domos.Accounting
 
 			return invoices
 				.Select(i => i.Events.OrderByDescending(ie => ie.Time).FirstOrDefault()) // Select the last events
+				.Where(le => le != null)
 				.Where(invoiceEventPredicate) // Filter the last events by the predicate
 				.Join(this.DomainContainer.Invoices, ie => ie.InvoiceID, i => i.ID, (ie, i) => i); // Join the invoices corresponding to the filtered last events.
 		}
@@ -1667,6 +1741,38 @@ namespace Grammophone.Domos.Accounting
 
 			await this.DomainContainer.SaveChangesAsync();
 		}
+
+		#endregion
+
+		#region Funds transfer requests
+
+		/// <summary>
+		/// Get the funds transfer requests which service a set of invoices.
+		/// </summary>
+		/// <param name="invoices">The set of invoices.</param>
+		public IQueryable<FundsTransferRequest> GetServicingRequestsForInvoices(IQueryable<I> invoices)
+		{
+			if (invoices == null) throw new ArgumentNullException(nameof(invoices));
+
+			return from r in this.DomainContainer.FundsTransferRequests
+						 where invoices.Any(i => i.ServicingFundsTransferRequests.Any(sr => r.ID == sr.ID))
+						 select r;
+		}
+
+		/// <summary>
+		/// Get the invoices being serviced by a set of funds transfer requests.
+		/// </summary>
+		/// <param name="requests">The set of funds transfer requests.</param>
+		public IQueryable<I> GetServicedInvoicesOfRequests(IQueryable<FundsTransferRequest> requests)
+		{
+			if (requests == null) throw new ArgumentNullException(nameof(requests));
+
+			return from i in this.DomainContainer.Invoices
+						 where i.ServicingFundsTransferRequests.Any(sr => requests.Any(r => sr.ID == r.ID))
+						 select i;
+		}
+
+		#endregion
 
 		#endregion
 	}
