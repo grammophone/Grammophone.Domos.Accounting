@@ -1654,7 +1654,7 @@ namespace Grammophone.Domos.Accounting
 		/// Add an invoice. Can contain lines and tax components.
 		/// </summary>
 		/// <param name="invoice">The invoice to add.</param>
-		public async Task AddInvooiceasync(I invoice)
+		public async Task AddInvoiceAsync(I invoice)
 		{
 			this.DomainContainer.Invoices.Add(invoice);
 
