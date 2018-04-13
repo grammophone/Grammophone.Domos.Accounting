@@ -1314,6 +1314,60 @@ namespace Grammophone.Domos.Accounting
 			return remittance;
 		}
 
+		/// <summary>
+		/// Visit all postings and remittances of a journal and apply actions to them.
+		/// </summary>
+		/// <param name="journal">The journal.</param>
+		/// <param name="postingAction">The action to be applied to each posting.</param>
+		/// <param name="remittanceAction">The action to be applied to each remittance.</param>
+		protected void VisitJournalLines(J journal, Action<P> postingAction = null, Action<R> remittanceAction = null)
+		{
+			if (journal == null) throw new ArgumentNullException(nameof(journal));
+
+			if (postingAction != null)
+			{
+				foreach (var posting in journal.Postings)
+				{
+					postingAction(posting);
+				}
+			}
+
+			if (remittanceAction != null)
+			{
+				foreach (var remittance in journal.Remittances)
+				{
+					remittanceAction(remittance);
+				}
+			}
+		}
+
+		/// <summary>
+		/// Visit all postings and remittances of a journal and apply actions to them.
+		/// </summary>
+		/// <param name="journal">The journal.</param>
+		/// <param name="asyncPostingAction">The asynchronous action to be applied to each posting.</param>
+		/// <param name="asyncRemittanceAction">The asynchronous action to be applied to each remittance.</param>
+		protected async Task VisitJournalLinesAsync(J journal, Func<P, Task> asyncPostingAction = null, Func<R, Task> asyncRemittanceAction = null)
+		{
+			if (journal == null) throw new ArgumentNullException(nameof(journal));
+
+			if (asyncPostingAction != null)
+			{
+				foreach (var posting in journal.Postings)
+				{
+					await asyncPostingAction(posting);
+				}
+			}
+
+			if (asyncRemittanceAction != null)
+			{
+				foreach (var remittance in journal.Remittances)
+				{
+					await asyncRemittanceAction(remittance);
+				}
+			}
+		}
+
 		#endregion
 
 		#region Private methods
