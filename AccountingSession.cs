@@ -466,7 +466,7 @@ namespace Grammophone.Domos.Accounting
 		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Pending"/>
 		/// in it.
 		/// </summary>
-		/// <param name="bankAccountHolder">An entity holding a bank account.</param>
+		/// <param name="bankingDetail">Bank account details.</param>
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="transferAccount">The transfer account for outgoing funds, if <paramref name="amount"/> is positive, otherwise ignored.</param>
@@ -480,7 +480,7 @@ namespace Grammophone.Domos.Accounting
 		/// if the <paramref name="amount"/> is positive.
 		/// </returns>
 		public async Task<ActionResult> CreateFundsTransferRequestAsync(
-			IBankAccountHolder bankAccountHolder,
+			IBankingDetail bankingDetail,
 			decimal amount,
 			Account mainAccount,
 			Account transferAccount,
@@ -489,11 +489,11 @@ namespace Grammophone.Domos.Accounting
 			string requestComments = null,
 			string pendingEventComments = null)
 		{
-			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
+			if (bankingDetail == null) throw new ArgumentNullException(nameof(bankingDetail));
 
 			return await CreateFundsTransferRequestAsync(
-				bankAccountHolder.EncryptedBankAccountInfo,
-				bankAccountHolder.GetBankAccountHolderName(),
+				bankingDetail.EncryptedBankAccountInfo,
+				bankingDetail.GetBankAccountHolderName(),
 				amount,
 				mainAccount,
 				transferAccount,
@@ -553,7 +553,7 @@ namespace Grammophone.Domos.Accounting
 		/// in it.
 		/// </summary>
 		/// <param name="transferableFundsHolder">The holder of funds.</param>
-		/// <param name="bankAccountHolder">A holder of a bank account to be assigned to the request.</param>
+		/// <param name="bankingDetail">Banking details to be assigned to the request.</param>
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
@@ -566,21 +566,21 @@ namespace Grammophone.Domos.Accounting
 		/// </returns>
 		public async Task<ActionResult> CreateFundsTransferRequestAsync(
 			ITransferableFundsHolder transferableFundsHolder,
-			IBankAccountHolder bankAccountHolder,
+			IBankingDetail bankingDetail,
 			decimal amount,
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null)
 		{
-			if (bankAccountHolder == null) throw new ArgumentNullException(nameof(bankAccountHolder));
+			if (bankingDetail == null) throw new ArgumentNullException(nameof(bankingDetail));
 
-			var encryptedBankAccountInfo = bankAccountHolder.EncryptedBankAccountInfo.Clone(this.DomainContainer);
+			var encryptedBankAccountInfo = bankingDetail.EncryptedBankAccountInfo.Clone(this.DomainContainer);
 
 			return await CreateFundsTransferRequestAsync(
 				transferableFundsHolder,
 				encryptedBankAccountInfo,
-				bankAccountHolder.GetBankAccountHolderName(),
+				bankingDetail.GetBankAccountHolderName(),
 				amount,
 				asyncJournalAppendAction,
 				batchID,
