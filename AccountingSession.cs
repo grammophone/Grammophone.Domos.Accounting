@@ -715,7 +715,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="responseCode">The optinal response code of the event.</param>
 		/// <param name="traceCode">The optional trace code for the event.</param>
 		/// <param name="comments">Optional comments. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
-		/// <param name="exception">Optional exception to record in the event.</param>
+		/// <param name="exception">Optional exception during digestion to record in the event.</param>
 		/// <returns>
 		/// Returns an action holding the created event
 		/// and optionally any journal executed because of the event.
@@ -866,10 +866,6 @@ namespace Grammophone.Domos.Accounting
 						request.State = FundsTransferState.Submitted;
 						break;
 
-					case FundsTransferEventType.WorkflowFailed:
-						request.State = FundsTransferState.WorkflowFailed;
-						break;
-
 					case FundsTransferEventType.Failed:
 						request.State = FundsTransferState.Failed;
 
@@ -962,7 +958,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="responseCode">The optinal response code of the event.</param>
 		/// <param name="traceCode">The optional trace code for the event.</param>
 		/// <param name="comments">Optional comments.</param>
-		/// <param name="exception">Optional exception to record in the event.</param>
+		/// <param name="exception">Optional exception during digestion to record in the event.</param>
 		/// <returns>
 		/// Returns an action holding the created event
 		/// and optionally any journal executed because of the event.
