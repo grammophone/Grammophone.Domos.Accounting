@@ -682,11 +682,11 @@ namespace Grammophone.Domos.Accounting
 						break;
 				}
 
-				bool moreRecentMessageExists = batch.Messages.Any(e => e.Time > utcTime);
+				bool moreRecentMessageExists = batch.Messages.Any(m => m.Type > messageType);
 
 				if (moreRecentMessageExists)
 					throw new AccountingException(
-						$"An more recent message already exists for batch with ID '{batch.ID}'.");
+						$"A more recent message already exists for batch with ID '{batch.ID}'.");
 
 				var message = this.DomainContainer.FundsTransferBatchMessages.Create();
 				this.DomainContainer.FundsTransferBatchMessages.Add(message);
@@ -783,7 +783,7 @@ namespace Grammophone.Domos.Accounting
 							{
 								bool typeIsAlreadyAdded = await
 									this.DomainContainer.FundsTransferEvents
-									.Where(e => e.RequestID == request.ID && e.Type == eventType && e.ExceptionData != null)
+									.Where(e => e.RequestID == request.ID && e.Type == eventType && e.ExceptionData == null)
 									.AnyAsync();
 
 								if (typeIsAlreadyAdded)
@@ -797,7 +797,7 @@ namespace Grammophone.Domos.Accounting
 
 				bool eventIsNotnew = await
 					this.DomainContainer.FundsTransferEvents
-					.Where(e => e.Request.ID == request.ID && e.Time > utcTime)
+					.Where(e => e.Request.ID == request.ID && e.Type > eventType)
 					.AnyAsync();
 
 				if (eventIsNotnew)
