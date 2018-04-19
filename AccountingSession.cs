@@ -773,33 +773,36 @@ namespace Grammophone.Domos.Accounting
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
-				// Allow only one pending or success event per request.
-				switch (eventType)
+				// Allow only one pending or success event per request with no digestion errors.
+				if (exception == null)
 				{
-					case FundsTransferEventType.Pending:
-					case FundsTransferEventType.Succeeded:
-						{
-							bool typeIsAlreadyAdded = await
-								this.DomainContainer.FundsTransferEvents
-								.Where(e => e.RequestID == request.ID && e.Type == eventType)
-								.AnyAsync();
+					switch (eventType)
+					{
+						case FundsTransferEventType.Pending:
+						case FundsTransferEventType.Succeeded:
+							{
+								bool typeIsAlreadyAdded = await
+									this.DomainContainer.FundsTransferEvents
+									.Where(e => e.RequestID == request.ID && e.Type == eventType && e.ExceptionData != null)
+									.AnyAsync();
 
-							if (typeIsAlreadyAdded)
-								throw new AccountingException(
-									$"An event of type '{eventType}' already exists for request with ID '{request.ID}'.");
+								if (typeIsAlreadyAdded)
+									throw new AccountingException(
+										$"A successfully digested event of type '{eventType}' already exists for request with ID '{request.ID}'.");
 
-						}
-						break;
+							}
+							break;
+					}
 				}
 
 				bool eventIsNotnew = await
 					this.DomainContainer.FundsTransferEvents
-					.Where(e => e.Request.ID == request.ID && e.Time >= utcTime)
+					.Where(e => e.Request.ID == request.ID && e.Time > utcTime)
 					.AnyAsync();
 
 				if (eventIsNotnew)
 					throw new AccountingException(
-						"The added event is not newer than all the existing events of the request.");
+						"The added event is older than existing events of the request.");
 
 				var transferEvent = this.DomainContainer.FundsTransferEvents.Create();
 
@@ -841,7 +844,7 @@ namespace Grammophone.Domos.Accounting
 				switch (eventType)
 				{
 					case FundsTransferEventType.Pending:
-						if (request.Amount > 0.0M)
+						if (request.Amount > 0.0M && exception == null)
 						{
 							journal = CreateJournalForFundsTransferEvent(transferEvent);
 
@@ -869,7 +872,7 @@ namespace Grammophone.Domos.Accounting
 					case FundsTransferEventType.Failed:
 						request.State = FundsTransferState.Failed;
 
-						if (request.Amount > 0.0M)
+						if (request.Amount > 0.0M && exception == null)
 						{
 							journal = CreateJournalForFundsTransferEvent(transferEvent);
 
@@ -893,26 +896,29 @@ namespace Grammophone.Domos.Accounting
 					case FundsTransferEventType.Succeeded:
 						request.State = FundsTransferState.Succeeded;
 
-						journal = CreateJournalForFundsTransferEvent(transferEvent);
-
-						journal.Description = AccountingMessages.TRANSFER_SUCCEEDED;
-
+						if (exception == null)
 						{
-							var remittance = CreateRemittanceForJournal(journal, batch.CreditSystemID);
+							journal = CreateJournalForFundsTransferEvent(transferEvent);
 
-							remittance.Amount = -request.Amount;
-							remittance.FundsTransferEvent = transferEvent;
-							remittance.TransactionID = request.GUID.ToString();
+							journal.Description = AccountingMessages.TRANSFER_SUCCEEDED;
 
-							if (request.Amount > 0.0M)
 							{
-								remittance.Account = request.TransferAccount;
-								remittance.Description = AccountingMessages.DEPLETE_TRANSFER_ACCOUNT;
-							}
-							else
-							{
-								remittance.Account = request.MainAccount;
-								remittance.Description = AccountingMessages.FUND_MAIN_ACCOUNT;
+								var remittance = CreateRemittanceForJournal(journal, batch.CreditSystemID);
+
+								remittance.Amount = -request.Amount;
+								remittance.FundsTransferEvent = transferEvent;
+								remittance.TransactionID = request.GUID.ToString();
+
+								if (request.Amount > 0.0M)
+								{
+									remittance.Account = request.TransferAccount;
+									remittance.Description = AccountingMessages.DEPLETE_TRANSFER_ACCOUNT;
+								}
+								else
+								{
+									remittance.Account = request.MainAccount;
+									remittance.Description = AccountingMessages.FUND_MAIN_ACCOUNT;
+								}
 							}
 						}
 						break;
