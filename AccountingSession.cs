@@ -682,7 +682,7 @@ namespace Grammophone.Domos.Accounting
 						break;
 				}
 
-				bool moreRecentMessageExists = batch.Messages.Any(e => e.Time >= utcTime);
+				bool moreRecentMessageExists = batch.Messages.Any(e => e.Time > utcTime);
 
 				if (moreRecentMessageExists)
 					throw new AccountingException(
