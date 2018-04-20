@@ -1119,19 +1119,29 @@ namespace Grammophone.Domos.Accounting
 
 			ValidateJournal(journal);
 
-			if (journal.ID > 0)
+			if (journal.HasBeenExecuted)
 				throw new JournalAlreadyExecutedException();
 
-			using (var transaction = this.DomainContainer.BeginTransaction())
+			try
 			{
-				this.DomainContainer.Journals.Add(journal);
+				using (var transaction = this.DomainContainer.BeginTransaction())
+				{
+					this.DomainContainer.Journals.Add(journal);
 
-				AmendAccounts(journal.Postings);
-				AmendAccounts(journal.Remittances);
+					AmendAccounts(journal.Postings);
+					AmendAccounts(journal.Remittances);
 
-				await transaction.CommitAsync();
+					journal.HasBeenExecuted = true;
+
+					await transaction.CommitAsync();
+				}
 			}
+			catch
+			{
+				journal.HasBeenExecuted = false;
 
+				throw;
+			}
 		}
 
 		/// <summary>
@@ -1149,22 +1159,6 @@ namespace Grammophone.Domos.Accounting
 
 			if (postingsBalance != 0.0M)
 				throw new BalanceException();
-		}
-
-		/// <summary>
-		/// Amend account balances according to a collection of journal lines.
-		/// </summary>
-		protected void AmendAccounts(IEnumerable<JournalLine<U>> journalLines)
-		{
-			if (journalLines == null) throw new ArgumentNullException(nameof(journalLines));
-
-			foreach (var line in journalLines)
-			{
-				if (line.ID > 0)
-					throw new JournalAlreadyExecutedException(AccountingMessages.JOURNAL_LINE_ALREADY_EXECUTED);
-
-				line.Account.Balance += line.Amount;
-			}
 		}
 
 		/// <summary>
@@ -1563,6 +1557,19 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments);
+		}
+
+		/// <summary>
+		/// Amend account balances according to a collection of journal lines.
+		/// </summary>
+		private void AmendAccounts(IEnumerable<JournalLine<U>> journalLines)
+		{
+			if (journalLines == null) throw new ArgumentNullException(nameof(journalLines));
+
+			foreach (var line in journalLines)
+			{
+				line.Account.Balance += line.Amount;
+			}
 		}
 
 		#endregion
