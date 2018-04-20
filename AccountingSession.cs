@@ -1756,7 +1756,13 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (invoice == null) throw new ArgumentNullException(nameof(invoice));
 
-			await AddEventToInvoiceAsync(invoice.ID, invoiceEvent);
+			var lastInvoiceEvent = invoice.Events.OrderByDescending(i => i.Time).FirstOrDefault();
+
+			ValidateNewInvoiceEvent(invoiceEvent, lastInvoiceEvent);
+
+			invoice.Events.Add(invoiceEvent);
+
+			await this.DomainContainer.SaveChangesAsync();
 		}
 
 		/// <summary>
@@ -1776,28 +1782,7 @@ namespace Grammophone.Domos.Accounting
 
 			var lastInvoiceEvent = await lastInvoiceEventQuery.SingleOrDefaultAsync();
 
-			if (lastInvoiceEvent != null)
-			{
-				if (lastInvoiceEvent.Time >= invoiceEvent.Time)
-					throw new AccountingException("The invoice being added has Time property less than the last event of the invoice.");
-
-				switch (lastInvoiceEvent.InvoiceState)
-				{
-					case InvoiceState.PartiallyPaid:
-						if (invoiceEvent.InvoiceState < lastInvoiceEvent.InvoiceState)
-							throw new AccountingException($"The new event must have at least state {InvoiceState.PartiallyPaid} or higher.");
-
-						break;
-
-					case InvoiceState.Paid:
-						throw new AccountingException("The invoice is already fully paid. No new invoice event is acceptable.");
-
-					default:
-						if (invoiceEvent.InvoiceState <= lastInvoiceEvent.InvoiceState)
-							throw new AccountingException($"The new event must have at state higher than {lastInvoiceEvent.InvoiceState} or higher.");
-						break;
-				}
-			}
+			ValidateNewInvoiceEvent(invoiceEvent, lastInvoiceEvent);
 
 			this.DomainContainer.InvoiceEvents.Add(invoiceEvent);
 			invoiceEvent.InvoiceID = invoiceID;
@@ -1836,6 +1821,44 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		#endregion
+
+		#endregion
+
+		#region Private methods
+
+		/// <summary>
+		/// Validate a new invoice event.
+		/// </summary>
+		/// <param name="invoiceEvent">The event to validate.</param>
+		/// <param name="lastInvoiceEvent">The last pre-existing event of the invoice or null if there is none.</param>
+		/// <exception cref="AccountingException">Thrown when the event is not valid.</exception>
+		private static void ValidateNewInvoiceEvent(IE invoiceEvent, IE lastInvoiceEvent = null)
+		{
+			if (invoiceEvent == null) throw new ArgumentNullException(nameof(invoiceEvent));
+
+			if (lastInvoiceEvent != null)
+			{
+				if (lastInvoiceEvent.Time >= invoiceEvent.Time)
+					throw new AccountingException("The invoice being added has Time property less than the last event of the invoice.");
+
+				switch (lastInvoiceEvent.InvoiceState)
+				{
+					case InvoiceState.PartiallyPaid:
+						if (invoiceEvent.InvoiceState < lastInvoiceEvent.InvoiceState)
+							throw new AccountingException($"The new event must have at least state {InvoiceState.PartiallyPaid} or higher.");
+
+						break;
+
+					case InvoiceState.Paid:
+						throw new AccountingException("The invoice is already fully paid. No new invoice event is acceptable.");
+
+					default:
+						if (invoiceEvent.InvoiceState <= lastInvoiceEvent.InvoiceState)
+							throw new AccountingException($"The new event must have at state higher than {lastInvoiceEvent.InvoiceState} or higher.");
+						break;
+				}
+			}
+		}
 
 		#endregion
 	}
