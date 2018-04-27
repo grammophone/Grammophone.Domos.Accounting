@@ -773,13 +773,15 @@ namespace Grammophone.Domos.Accounting
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
-				// Allow only one pending or success event per request with no digestion errors.
+				// Allow only one pending, success, failure or rejected event per request with no digestion errors.
 				if (exception == null)
 				{
 					switch (eventType)
 					{
 						case FundsTransferEventType.Pending:
 						case FundsTransferEventType.Succeeded:
+						case FundsTransferEventType.Failed:
+						case FundsTransferEventType.Rejected:
 							{
 								bool typeIsAlreadyAdded = await
 									this.DomainContainer.FundsTransferEvents
@@ -870,6 +872,7 @@ namespace Grammophone.Domos.Accounting
 						break;
 
 					case FundsTransferEventType.Failed:
+					case FundsTransferEventType.Rejected:
 						request.State = FundsTransferState.Failed;
 
 						if (request.Amount > 0.0M && exception == null)
@@ -1001,7 +1004,6 @@ namespace Grammophone.Domos.Accounting
 				this.DomainContainer.FundsTransferRequests
 				.Include(r => r.MainAccount)
 				.Include(r => r.TransferAccount)
-				.Include(r => r.Batch.Messages)
 				.SingleAsync(r => r.ID == requestID);
 
 			return await AddFundsTransferEventAsync(
