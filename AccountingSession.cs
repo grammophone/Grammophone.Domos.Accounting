@@ -783,15 +783,19 @@ namespace Grammophone.Domos.Accounting
 						case FundsTransferEventType.Failed:
 						case FundsTransferEventType.Rejected:
 							{
-								bool typeIsAlreadyAdded = await
-									this.DomainContainer.FundsTransferEvents
-									.Where(e => e.RequestID == request.ID && e.Type == eventType && e.ExceptionData == null)
-									.AnyAsync();
+								var existingEventQuery = from e in this.DomainContainer.FundsTransferEvents
+																				 where e.RequestID == request.ID
+																				 && (e.Type == eventType || e.Type == FundsTransferEventType.Failed 
+																				 || e.Type == FundsTransferEventType.Rejected || e.Type == FundsTransferEventType.Succeeded)
+																				 && e.ExceptionData == null
+																				 orderby e.Time, e.CreationDate
+																				 select e;
 
-								if (typeIsAlreadyAdded)
+								var existingEvent = await existingEventQuery.FirstOrDefaultAsync();
+
+								if (existingEvent != null)
 									throw new AccountingException(
-										$"A successfully digested event of type '{eventType}' already exists for request with ID '{request.ID}'.");
-
+										$"A successfully digested event of type '{existingEvent.Type}' already exists for request with ID '{request.ID}'.");
 							}
 							break;
 					}
