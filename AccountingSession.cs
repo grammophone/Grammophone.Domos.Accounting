@@ -866,15 +866,8 @@ namespace Grammophone.Domos.Accounting
 						}
 						break;
 
-					case FundsTransferEventType.Submitted:
-					case FundsTransferEventType.Accepted:
-						request.State = FundsTransferState.Submitted;
-						break;
-
 					case FundsTransferEventType.Failed:
 					case FundsTransferEventType.Rejected:
-						request.State = FundsTransferState.Failed;
-
 						if (request.Amount > 0.0M && exception == null)
 						{
 							journal = CreateJournalForFundsTransferEvent(transferEvent);
@@ -897,8 +890,6 @@ namespace Grammophone.Domos.Accounting
 						break;
 
 					case FundsTransferEventType.Succeeded:
-						request.State = FundsTransferState.Succeeded;
-
 						if (exception == null)
 						{
 							journal = CreateJournalForFundsTransferEvent(transferEvent);
@@ -1476,7 +1467,6 @@ namespace Grammophone.Domos.Accounting
 				this.DomainContainer.FundsTransferRequests.Add(request);
 
 				request.Amount = amount;
-				request.State = FundsTransferState.Pending;
 				request.GUID = Guid.NewGuid();
 				request.BatchID = batchID;
 				request.MainAccount = mainAccount;
