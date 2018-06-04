@@ -428,6 +428,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
+		/// <param name="bankAccountHolderToken">Optional token identifying the bank account holder.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -442,7 +443,8 @@ namespace Grammophone.Domos.Accounting
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
-			string pendingEventComments = null)
+			string pendingEventComments = null,
+			string bankAccountHolderToken = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
@@ -458,7 +460,8 @@ namespace Grammophone.Domos.Accounting
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
-				pendingEventComments);
+				pendingEventComments,
+				bankAccountHolderToken);
 		}
 
 		/// <summary>
@@ -500,7 +503,8 @@ namespace Grammophone.Domos.Accounting
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
-				pendingEventComments);
+				pendingEventComments,
+				bankingDetail.GetBankAccountHolderToken());
 		}
 
 		/// <summary>
@@ -516,6 +520,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
+		/// <param name="bankAccountHolderToken">Optional token identifying the bank account holder.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -529,7 +534,8 @@ namespace Grammophone.Domos.Accounting
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
-			string pendingEventComments = null)
+			string pendingEventComments = null,
+			string bankAccountHolderToken = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
@@ -544,7 +550,8 @@ namespace Grammophone.Domos.Accounting
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
-				pendingEventComments);
+				pendingEventComments,
+				bankAccountHolderToken);
 		}
 
 		/// <summary>
@@ -585,7 +592,8 @@ namespace Grammophone.Domos.Accounting
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
-				pendingEventComments);
+				pendingEventComments,
+				bankingDetail.GetBankAccountHolderToken());
 		}
 
 		/// <summary>
@@ -612,25 +620,23 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 
-			var bankAccountHolder = transferableFundsHolder.BankingDetail;
+			var bankAccountDetail = transferableFundsHolder.BankingDetail;
 
-			if (bankAccountHolder == null)
+			if (bankAccountDetail == null)
 				throw new ArgumentException(
 					"The BankingDetail of the funds holder is not set.",
 					nameof(transferableFundsHolder));
 
-			var encryptedBankAccountInfo =
-				bankAccountHolder.EncryptedBankAccountInfo.Clone(this.DomainContainer);
-
 			return await CreateFundsTransferRequestAsync(
 				transferableFundsHolder,
-				encryptedBankAccountInfo,
-				bankAccountHolder.GetBankAccountHolderName(),
+				bankAccountDetail.EncryptedBankAccountInfo,
+				bankAccountDetail.GetBankAccountHolderName(),
 				amount,
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
-				pendingEventComments);
+				pendingEventComments,
+				bankAccountDetail.GetBankAccountHolderToken());
 		}
 
 		/// <summary>
@@ -1387,13 +1393,25 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		/// <param name="encryptedBankAccountInfo">The encrypted banking info.</param>
 		/// <param name="bankAccountHolderName">The name of the holder of the bank account.</param>
+		/// <param name="bankAccountHolderToken">Optional token identifying the holder of the bank account.</param>
 		/// <returns>Returns the requested group.</returns>
 		private async Task<FundsTransferRequestGroup> GetOrCreateFundsTransferRequestGroupAsync(
 			EncryptedBankAccountInfo encryptedBankAccountInfo,
-			string bankAccountHolderName)
+			string bankAccountHolderName,
+			string bankAccountHolderToken = null)
 		{
 			if (encryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(encryptedBankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
+
+			if (bankAccountHolderToken != null)
+			{
+				if (bankAccountHolderToken.Length > FundsTransferRequestGroup.AccountHolderTokenLength)
+				{
+					throw new ArgumentException(
+						$"The length of the token of the account holder must not be greater than {FundsTransferRequestGroup.AccountHolderTokenLength}.",
+						nameof(bankAccountHolderToken));
+				}
+			}
 
 			if (bankAccountHolderName.Length > FundsTransferRequestGroup.AccountHolderNameLength) // Clip length of bank account holder name if necessary
 				bankAccountHolderName = bankAccountHolderName.Substring(0, FundsTransferRequestGroup.AccountHolderNameLength);
@@ -1406,6 +1424,7 @@ namespace Grammophone.Domos.Accounting
 												 && g.EncryptedBankAccountInfo.EncryptedAccountNumber == encryptedBankAccountInfo.EncryptedAccountNumber
 												 && g.EncryptedBankAccountInfo.EncryptedTransitNumber == encryptedBankAccountInfo.EncryptedTransitNumber
 												 && g.AccountHolderName == bankAccountHolderName
+												 && g.AccountHolderToken == bankAccountHolderToken
 												 select g;
 
 				var group = await groupQuery.SingleOrDefaultAsync();
@@ -1422,6 +1441,7 @@ namespace Grammophone.Domos.Accounting
 
 				group.EncryptedBankAccountInfo = encryptedBankAccountInfo.Clone(this.DomainContainer);
 				group.AccountHolderName = bankAccountHolderName;
+				group.AccountHolderToken = bankAccountHolderToken;
 
 				await transaction.CommitAsync();
 
@@ -1443,6 +1463,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batchID">Optional ID of the batch.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
+		/// <param name="bankAccountHolderToken">Optional token identifying the bank account holder.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -1457,7 +1478,8 @@ namespace Grammophone.Domos.Accounting
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
-			string pendingEventComments = null)
+			string pendingEventComments = null,
+			string bankAccountHolderToken = null)
 		{
 			if (encryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(encryptedBankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
@@ -1475,7 +1497,7 @@ namespace Grammophone.Domos.Accounting
 				request.BatchID = batchID;
 				request.MainAccount = mainAccount;
 				request.TransferAccount = amount > 0.0M ? transferAccount : null; // Transfer is only needed during withdrawal.
-				request.Group = await GetOrCreateFundsTransferRequestGroupAsync(encryptedBankAccountInfo, bankAccountHolderName);
+				request.Group = await GetOrCreateFundsTransferRequestGroupAsync(encryptedBankAccountInfo, bankAccountHolderName, bankAccountHolderToken);
 				request.Comments = requestComments;
 
 				long? pendingBatchMessageID = null;
@@ -1525,6 +1547,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
+		/// <param name="bankAccountHolderToken">Optional token identifying the bank account holder.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -1538,7 +1561,8 @@ namespace Grammophone.Domos.Accounting
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
-			string pendingEventComments = null)
+			string pendingEventComments = null,
+			string bankAccountHolderToken = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
@@ -1552,7 +1576,8 @@ namespace Grammophone.Domos.Accounting
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
-				pendingEventComments);
+				pendingEventComments,
+				bankAccountHolderToken);
 		}
 
 		/// <summary>
