@@ -788,10 +788,12 @@ namespace Grammophone.Domos.Accounting
 						case FundsTransferEventType.Succeeded:
 						case FundsTransferEventType.Failed:
 						case FundsTransferEventType.Rejected:
+						case FundsTransferEventType.Returned:
 							{
 								var existingEventQuery = from e in this.DomainContainer.FundsTransferEvents
 																				 where e.RequestID == request.ID
-																				 && (e.Type == eventType || e.Type == FundsTransferEventType.Failed 
+																				 && (e.Type == eventType || e.Type == FundsTransferEventType.Failed
+																				 || e.Type == FundsTransferEventType.Returned
 																				 || e.Type == FundsTransferEventType.Rejected || e.Type == FundsTransferEventType.Succeeded)
 																				 && e.ExceptionData == null
 																				 orderby e.Time, e.CreationDate
