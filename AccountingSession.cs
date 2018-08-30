@@ -792,10 +792,10 @@ namespace Grammophone.Domos.Accounting
 							{
 								var existingEventQuery = from e in this.DomainContainer.FundsTransferEvents
 																				 where e.RequestID == request.ID
-																				 && (e.Type == eventType || e.Type == FundsTransferEventType.Failed
-																				 || e.Type == FundsTransferEventType.Returned
-																				 || e.Type == FundsTransferEventType.Rejected || e.Type == FundsTransferEventType.Succeeded)
-																				 && e.ExceptionData == null
+																				 && (e.Type == eventType || eventType != FundsTransferEventType.Returned && // 'Returned' only excludes itself.
+																				 (e.Type == FundsTransferEventType.Succeeded || e.Type == FundsTransferEventType.Rejected
+																				 || e.Type == FundsTransferEventType.Failed) // 'Failed', 'Rejected', 'Succeeded' cannot coexist with anything but 'Returned'.
+																				 && e.ExceptionData == null)
 																				 orderby e.Time, e.CreationDate
 																				 select e;
 
