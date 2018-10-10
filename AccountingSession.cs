@@ -791,11 +791,10 @@ namespace Grammophone.Domos.Accounting
 						case FundsTransferEventType.Returned:
 							{
 								var existingEventQuery = from e in this.DomainContainer.FundsTransferEvents
-																				 where e.RequestID == request.ID
+																				 where e.RequestID == request.ID && e.ExceptionData == null
 																				 && (e.Type == eventType || eventType != FundsTransferEventType.Returned && // 'Returned' only excludes itself.
 																				 (e.Type == FundsTransferEventType.Succeeded || e.Type == FundsTransferEventType.Rejected
-																				 || e.Type == FundsTransferEventType.Failed) // 'Failed', 'Rejected', 'Succeeded' cannot coexist with anything but 'Returned'.
-																				 && e.ExceptionData == null)
+																				 || e.Type == FundsTransferEventType.Failed)) // 'Failed', 'Rejected', 'Succeeded' cannot coexist with anything but 'Returned'.
 																				 orderby e.Time, e.CreationDate
 																				 select e;
 
