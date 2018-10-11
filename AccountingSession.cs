@@ -794,7 +794,9 @@ namespace Grammophone.Domos.Accounting
 																				 where e.RequestID == request.ID && e.ExceptionData == null
 																				 && (e.Type == eventType || eventType != FundsTransferEventType.Returned && // 'Returned' only excludes itself.
 																				 (e.Type == FundsTransferEventType.Succeeded || e.Type == FundsTransferEventType.Rejected
-																				 || e.Type == FundsTransferEventType.Failed)) // 'Failed', 'Rejected', 'Succeeded' cannot coexist with anything but 'Returned'.
+																				 || e.Type == FundsTransferEventType.Failed) // 'Failed', 'Rejected', 'Succeeded' cannot coexist with anything but 'Returned'.
+																				 || eventType == FundsTransferEventType.Returned && 
+																				 (e.Type == FundsTransferEventType.Failed || e.Type == FundsTransferEventType.Rejected))
 																				 orderby e.Time, e.CreationDate
 																				 select e;
 
@@ -879,23 +881,53 @@ namespace Grammophone.Domos.Accounting
 
 					case FundsTransferEventType.Failed:
 					case FundsTransferEventType.Rejected:
-						if (request.Amount > 0.0M && exception == null)
+					case FundsTransferEventType.Returned:
+						if (exception == null)
 						{
-							journal = CreateJournalForFundsTransferEvent(transferEvent);
+							if (request.Amount > 0.0M)
+							{
+								journal = CreateJournalForFundsTransferEvent(transferEvent);
 
-							journal.Description = AccountingMessages.REFUND_FAILED_TRANSFER;
+								if (eventType == FundsTransferEventType.Returned)
+								{
+									// Did we catch returned item on time? Or do we have previous success?
 
-							P moveFromTransferAccountPosting = CreatePostingForJournal(journal);
+									if (await SuccessEventExistsForRequestAsync(request.ID))
+									{
+										// Too late, handle late returned items.
+										await OnOutgoingFundsTransferReturnAsync(transferEvent, journal);
 
-							moveFromTransferAccountPosting.Amount = -request.Amount;
-							moveFromTransferAccountPosting.Account = request.TransferAccount;
-							moveFromTransferAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_FROM_TRANSFER_ACCOUNT;
+										break;
+									}
+								}
 
-							P moveToMainAccountPosting = CreatePostingForJournal(journal);
+								journal.Description = AccountingMessages.REFUND_FAILED_TRANSFER;
 
-							moveToMainAccountPosting.Amount = request.Amount;
-							moveToMainAccountPosting.Account = request.MainAccount;
-							moveToMainAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_TO_MAIN_ACCOUNT;
+								P moveFromTransferAccountPosting = CreatePostingForJournal(journal);
+
+								moveFromTransferAccountPosting.Amount = -request.Amount;
+								moveFromTransferAccountPosting.Account = request.TransferAccount;
+								moveFromTransferAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_FROM_TRANSFER_ACCOUNT;
+
+								P moveToMainAccountPosting = CreatePostingForJournal(journal);
+
+								moveToMainAccountPosting.Amount = request.Amount;
+								moveToMainAccountPosting.Account = request.MainAccount;
+								moveToMainAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_TO_MAIN_ACCOUNT;
+							}
+							else if (request.Amount < 0.0M && eventType == FundsTransferEventType.Returned)
+							{
+								// Did we catch returned item on time? Or do we have previous success?
+
+								if (await SuccessEventExistsForRequestAsync(request.ID))
+								{
+									// Too late, handle late returned items.
+
+									journal = CreateJournalForFundsTransferEvent(transferEvent);
+
+									await OnIngoingFundsTransferReturnAsync(transferEvent, journal);
+								}
+							}
 						}
 
 						break;
@@ -1103,6 +1135,28 @@ namespace Grammophone.Domos.Accounting
 		#endregion
 
 		#region Protected methods
+
+		/// <summary>
+		/// Called when an event for a late return (post-success) of an ingoing funds transfer request is received.
+		/// </summary>
+		/// <param name="transferEvent">The funds transfer event for the late return.</param>
+		/// <param name="journal">The journal to append handling of the late return, if needed.</param>
+		/// <remarks>
+		/// The default implementation does nothing.
+		/// </remarks>
+		protected virtual Task OnIngoingFundsTransferReturnAsync(FundsTransferEvent transferEvent, J journal)
+			=> Task.CompletedTask;
+
+		/// <summary>
+		/// Called when an event for a late return (post-success) of an outgoing funds transfer request is received.
+		/// </summary>
+		/// <param name="transferEvent">The funds transfer event for the late return.</param>
+		/// <param name="journal">The journal to append handling of the late return, if needed.</param>
+		/// <remarks>
+		/// The default implementation does nothing.
+		/// </remarks>
+		protected virtual Task OnOutgoingFundsTransferReturnAsync(FundsTransferEvent transferEvent, J journal)
+			=> Task.CompletedTask;
 
 		/// <summary>
 		/// Execute and persist a fresh journal, which must have not been previously
@@ -1386,6 +1440,19 @@ namespace Grammophone.Domos.Accounting
 				entityListener = new EntityListener(agent.ID);
 				domainContainer.EntityListeners.Add(entityListener);
 			}
+		}
+
+		/// <summary>
+		/// Returns whether a success event exists for a funds transfer request.
+		/// </summary>
+		/// <param name="requestID">The ID of the funds transfer request.</param>
+		private async Task<bool> SuccessEventExistsForRequestAsync(long requestID)
+		{
+			var previousSuccessEventQuery = from e in this.DomainContainer.FundsTransferEvents
+																			where e.RequestID == requestID && e.Type == FundsTransferEventType.Succeeded
+																			select e;
+
+			return await previousSuccessEventQuery.AnyAsync();
 		}
 
 		/// <summary>
