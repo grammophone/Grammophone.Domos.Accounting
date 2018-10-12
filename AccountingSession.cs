@@ -975,7 +975,7 @@ namespace Grammophone.Domos.Accounting
 
 				if (journal != null)
 				{
-					EnsureSufficientBalances(journal);
+					EnsureSufficientBalancesForFundsTransfer(transferEvent, journal);
 
 					await ExecuteJournalAsync(journal);
 				}
@@ -1243,21 +1243,21 @@ namespace Grammophone.Domos.Accounting
 		/// after the execution of the journal.
 		/// </summary>
 		/// <param name="journal">The journal to test.</param>
-		/// <param name="accountPredicate">
+		/// <param name="testedAccountPredicate">
 		/// A predicate to select which accounts are tested for negative balance.
 		/// </param>
 		/// <exception cref="NegativeBalanceException">
 		/// Thrown when at least one account balance would turn to negative
 		/// if the journal would be executed.
 		/// </exception>
-		protected void EnsureSufficientBalances(J journal, Func<Account, bool> accountPredicate)
+		protected void EnsureSufficientBalances(J journal, Func<Account, bool> testedAccountPredicate)
 		{
 			if (journal == null) throw new ArgumentNullException(nameof(journal));
-			if (accountPredicate == null) throw new ArgumentNullException(nameof(accountPredicate));
+			if (testedAccountPredicate == null) throw new ArgumentNullException(nameof(testedAccountPredicate));
 
 			IReadOnlyDictionary<Account, decimal> futureBalancesByAccount = PredictAccountBalances(journal);
 
-			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M && entry.Value < entry.Key.Balance && accountPredicate(entry.Key)))
+			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M && entry.Value < entry.Key.Balance && testedAccountPredicate(entry.Key)))
 				throw new NegativeBalanceException(futureBalancesByAccount);
 		}
 
@@ -1420,6 +1420,24 @@ namespace Grammophone.Domos.Accounting
 					await asyncRemittanceAction(remittance);
 				}
 			}
+		}
+
+		/// <summary>
+		/// Ensure that there are sufficient balances for executing a journal during digestion of a funds transfer event.
+		/// </summary>
+		/// <param name="fundsTransferEvent">The funds transfer event being digested.</param>
+		/// <param name="journal">The journal being executed.</param>
+		/// <exception cref="NegativeBalanceException">
+		/// Thrown when at least one account balance would turn to negative when in shouldn't
+		/// if the journal would be executed.
+		/// </exception>
+		/// <remarks>
+		/// The default implementation calls <see cref="EnsureSufficientBalances(J)"/> to ensure all accounts will no go negative.
+		/// Override using <see cref="EnsureSufficientBalances(J, Func{Account, bool})"/> to specify which accounts may go negative.
+		/// </remarks>
+		protected virtual void EnsureSufficientBalancesForFundsTransfer(FundsTransferEvent fundsTransferEvent, J journal)
+		{
+			EnsureSufficientBalances(journal);
 		}
 
 		#endregion
