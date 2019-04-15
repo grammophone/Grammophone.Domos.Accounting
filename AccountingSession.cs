@@ -779,24 +779,37 @@ namespace Grammophone.Domos.Accounting
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
-				// Allow only one pending, success, failure or rejected event per request with no digestion errors.
+				// Allow only one pending, success or returned event per request with no digestion errors.
 				if (exception == null)
 				{
 					switch (eventType)
 					{
 						case FundsTransferEventType.Pending:
 						case FundsTransferEventType.Succeeded:
-						case FundsTransferEventType.Failed:
-						case FundsTransferEventType.Rejected:
 						case FundsTransferEventType.Returned:
 							{
 								var existingEventQuery = from e in this.DomainContainer.FundsTransferEvents
 																				 where e.RequestID == request.ID && e.ExceptionData == null
 																				 && (e.Type == eventType || eventType != FundsTransferEventType.Returned && // 'Returned' only excludes itself.
-																				 (e.Type == FundsTransferEventType.Succeeded || e.Type == FundsTransferEventType.Rejected
-																				 || e.Type == FundsTransferEventType.Failed) // 'Failed', 'Rejected', 'Succeeded' cannot coexist with anything but 'Returned'.
+																				 e.Type == FundsTransferEventType.Succeeded // 'Succeeded' cannot coexist with anything but 'Returned'.
 																				 || eventType == FundsTransferEventType.Returned && 
 																				 (e.Type == FundsTransferEventType.Failed || e.Type == FundsTransferEventType.Rejected))
+																				 orderby e.Time, e.CreationDate
+																				 select e;
+
+								var existingEvent = await existingEventQuery.FirstOrDefaultAsync();
+
+								if (existingEvent != null)
+									throw new AccountingException(
+										$"A successfully digested event of type '{existingEvent.Type}' already exists for request with ID '{request.ID}'.");
+							}
+							break;
+
+						case FundsTransferEventType.Failed:
+						case FundsTransferEventType.Rejected:
+							{
+								var existingEventQuery = from e in this.DomainContainer.FundsTransferEvents
+																				 where e.RequestID == request.ID && e.ExceptionData == null && e.Type == FundsTransferEventType.Succeeded
 																				 orderby e.Time, e.CreationDate
 																				 select e;
 
