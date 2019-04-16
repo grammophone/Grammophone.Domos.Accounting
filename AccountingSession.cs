@@ -885,14 +885,14 @@ namespace Grammophone.Domos.Accounting
 						{
 							if (request.Amount > 0.0M)
 							{
-								journal = CreateJournalForFundsTransferEvent(transferEvent);
-
 								if (eventType == FundsTransferEventType.Returned)
 								{
 									// Did we catch returned item on time? Or do we have previous success?
 
 									if (await SuccessEventExistsForRequestAsync(request.ID))
 									{
+										journal = CreateJournalForFundsTransferEvent(transferEvent);
+
 										// Too late, handle late returned items.
 										await OnOutgoingFundsTransferReturnAsync(transferEvent, journal);
 
@@ -910,6 +910,8 @@ namespace Grammophone.Domos.Accounting
 										break;
 									}
 								}
+
+								journal = CreateJournalForFundsTransferEvent(transferEvent);
 
 								journal.Description = AccountingMessages.REFUND_FAILED_TRANSFER;
 
@@ -1027,7 +1029,7 @@ namespace Grammophone.Domos.Accounting
 		private async Task<bool> FailureEventExistsForRequestAsync(long requestID)
 		{
 			var query = from e in this.DomainContainer.FundsTransferEvents
-									where e.RequestID == requestID && e.ExceptionData != null
+									where e.RequestID == requestID && e.ExceptionData == null
 									where e.Type == FundsTransferEventType.Failed || e.Type == FundsTransferEventType.Rejected
 									|| e.Type == FundsTransferEventType.Returned
 									select e;
