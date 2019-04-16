@@ -90,7 +90,7 @@ namespace Grammophone.Domos.Accounting
 			/// <summary>
 			/// The ID of the acting user.
 			/// </summary>
-			private long agentID;
+			private readonly long agentID;
 
 			#endregion
 
@@ -777,6 +777,8 @@ namespace Grammophone.Domos.Accounting
 					break;
 			}
 
+			bool inhibitJournalAppend = false;
+
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
 				// Allow only one pending, success, failure or rejected event per request with no digestion errors.
@@ -792,11 +794,8 @@ namespace Grammophone.Domos.Accounting
 							{
 								var existingEventQuery = from e in this.DomainContainer.FundsTransferEvents
 																				 where e.RequestID == request.ID && e.ExceptionData == null
-																				 && (e.Type == eventType || eventType != FundsTransferEventType.Returned && // 'Returned' only excludes itself.
-																				 (e.Type == FundsTransferEventType.Succeeded || e.Type == FundsTransferEventType.Rejected
-																				 || e.Type == FundsTransferEventType.Failed) // 'Failed', 'Rejected', 'Succeeded' cannot coexist with anything but 'Returned'.
-																				 || eventType == FundsTransferEventType.Returned && 
-																				 (e.Type == FundsTransferEventType.Failed || e.Type == FundsTransferEventType.Rejected))
+																				 where eventType < e.Type
+																				 || eventType != FundsTransferEventType.Failed && eventType != FundsTransferEventType.Rejected && e.Type == eventType
 																				 orderby e.Time, e.CreationDate
 																				 select e;
 
@@ -897,6 +896,17 @@ namespace Grammophone.Domos.Accounting
 										// Too late, handle late returned items.
 										await OnOutgoingFundsTransferReturnAsync(transferEvent, journal);
 
+										inhibitJournalAppend = true;
+
+										break;
+									}
+								}
+								else
+								{
+									if (await FailureEventExistsForRequestAsync(request.ID))
+									{
+										inhibitJournalAppend = true;
+
 										break;
 									}
 								}
@@ -915,18 +925,33 @@ namespace Grammophone.Domos.Accounting
 								moveToMainAccountPosting.Account = request.MainAccount;
 								moveToMainAccountPosting.Description = AccountingMessages.MOVE_AMOUNT_TO_MAIN_ACCOUNT;
 							}
-							else if (request.Amount < 0.0M && eventType == FundsTransferEventType.Returned)
+							else if (request.Amount < 0.0M)
 							{
-								// Did we catch returned item on time? Or do we have previous success?
-
-								if (await SuccessEventExistsForRequestAsync(request.ID))
+								switch (eventType)
 								{
-									// Too late, handle late returned items.
+									case FundsTransferEventType.Returned:
+										// Did we catch returned item on time? Or do we have previous success?
+										if (await SuccessEventExistsForRequestAsync(request.ID))
+										{
+											// Too late, handle late returned items.
 
-									journal = CreateJournalForFundsTransferEvent(transferEvent);
+											journal = CreateJournalForFundsTransferEvent(transferEvent);
 
-									await OnIngoingFundsTransferReturnAsync(transferEvent, journal);
+											await OnIngoingFundsTransferReturnAsync(transferEvent, journal);
+
+											inhibitJournalAppend = true;
+										}
+										break;
+
+									default:
+										// Did we have a failure already?
+										if (await FailureEventExistsForRequestAsync(request.ID))
+										{
+											inhibitJournalAppend = true;
+										}
+										break;
 								}
+
 							}
 						}
 
@@ -963,21 +988,24 @@ namespace Grammophone.Domos.Accounting
 
 				this.DomainContainer.FundsTransferEvents.Add(transferEvent);
 
-				if (asyncJournalAppendAction != null)
+				if (exception != null)
 				{
-					if (journal == null)
+					if (asyncJournalAppendAction != null && !inhibitJournalAppend)
 					{
-						journal = CreateJournalForFundsTransferEvent(transferEvent);
+						if (journal == null)
+						{
+							journal = CreateJournalForFundsTransferEvent(transferEvent);
+						}
+
+						await asyncJournalAppendAction(journal);
 					}
 
-					await asyncJournalAppendAction(journal);
-				}
+					if (journal != null)
+					{
+						EnsureSufficientBalancesForFundsTransfer(transferEvent, journal);
 
-				if (journal != null)
-				{
-					EnsureSufficientBalancesForFundsTransfer(transferEvent, journal);
-
-					await ExecuteJournalAsync(journal);
+						await ExecuteJournalAsync(journal);
+					}
 				}
 
 				await transaction.CommitAsync();
@@ -988,6 +1016,23 @@ namespace Grammophone.Domos.Accounting
 					Journal = journal
 				};
 			}
+		}
+
+		/// <summary>
+		/// Return true whether a request contains a successfully digested event of
+		/// type <see cref="FundsTransferEventType.Failed"/>, <see cref="FundsTransferEventType.Rejected"/>
+		/// or <see cref="FundsTransferEventType.Returned"/>.
+		/// </summary>
+		/// <param name="requestID">The ID of the request.</param>
+		private async Task<bool> FailureEventExistsForRequestAsync(long requestID)
+		{
+			var query = from e in this.DomainContainer.FundsTransferEvents
+									where e.RequestID == requestID && e.ExceptionData != null
+									where e.Type == FundsTransferEventType.Failed || e.Type == FundsTransferEventType.Rejected
+									|| e.Type == FundsTransferEventType.Returned
+									select e;
+
+			return await query.AnyAsync();
 		}
 
 		/// <summary>
