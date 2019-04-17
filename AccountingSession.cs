@@ -990,7 +990,7 @@ namespace Grammophone.Domos.Accounting
 
 				this.DomainContainer.FundsTransferEvents.Add(transferEvent);
 
-				if (exception != null)
+				if (exception == null)
 				{
 					if (asyncJournalAppendAction != null && !inhibitJournalAppend)
 					{
