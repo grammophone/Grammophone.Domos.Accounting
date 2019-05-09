@@ -121,7 +121,7 @@
     <value>Deplete the outgoing transfer account upon remittance success.</value>
   </data>
   <data name="FUND_MAIN_ACCOUNT" xml:space="preserve">
-    <value>Fund the main account upong transfer success.</value>
+    <value>Fund the main account upon transfer success.</value>
   </data>
   <data name="GENERIC_FUNDS_TRANSFER_JOURNAL" xml:space="preserve">
     <value>Actions for funds transfer event of type {0}.</value>
@@ -147,16 +147,16 @@
   <data name="MOVE_AMOUNT_TO_TRANSFER_ACCOUNT" xml:space="preserve">
     <value>Move withdrawn amount to outgoung transfer account.</value>
   </data>
-  <data name="REFUND_FAILED_TRANSFER" xml:space="preserve">
-    <value>Refund failed transfer.</value>
+  <data name="TRANSFER_FAILED" xml:space="preserve">
+    <value>The funds transfer has failed.</value>
+  </data>
+  <data name="TRANSFER_RESERVE" xml:space="preserve">
+    <value>Move outgoing funds to transfer account.</value>
   </data>
   <data name="TRANSFER_SUCCEEDED" xml:space="preserve">
     <value>The funds transfer has succeeded.</value>
   </data>
   <data name="UNBALANCED_POSTINGS" xml:space="preserve">
     <value>The postings amounts within the journal don't sum to zero.</value>
-  </data>
-  <data name="WITHDRAWAL_TRANSFER_DESCRIPTION" xml:space="preserve">
-    <value>Move withdrawed funds to outgoing transfer account.</value>
   </data>
 </root>

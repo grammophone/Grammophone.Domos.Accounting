@@ -862,7 +862,7 @@ namespace Grammophone.Domos.Accounting
 						{
 							journal = CreateJournalForFundsTransferEvent(transferEvent);
 
-							journal.Description = AccountingMessages.WITHDRAWAL_TRANSFER_DESCRIPTION;
+							journal.Description = AccountingMessages.TRANSFER_RESERVE;
 
 							P moveFromMainAccountPosting = CreatePostingForJournal(journal);
 
@@ -913,7 +913,7 @@ namespace Grammophone.Domos.Accounting
 
 								journal = CreateJournalForFundsTransferEvent(transferEvent);
 
-								journal.Description = AccountingMessages.REFUND_FAILED_TRANSFER;
+								journal.Description = AccountingMessages.TRANSFER_FAILED;
 
 								P moveFromTransferAccountPosting = CreatePostingForJournal(journal);
 

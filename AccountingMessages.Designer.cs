@@ -70,7 +70,7 @@ namespace Grammophone.Domos.Accounting {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Fund the main account upong transfer success..
+        ///   Looks up a localized string similar to Fund the main account upon transfer success..
         /// </summary>
         internal static string FUND_MAIN_ACCOUNT {
             get {
@@ -151,11 +151,20 @@ namespace Grammophone.Domos.Accounting {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Refund failed transfer..
+        ///   Looks up a localized string similar to The funds transfer has failed..
         /// </summary>
-        internal static string REFUND_FAILED_TRANSFER {
+        internal static string TRANSFER_FAILED {
             get {
-                return ResourceManager.GetString("REFUND_FAILED_TRANSFER", resourceCulture);
+                return ResourceManager.GetString("TRANSFER_FAILED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Move outgoing funds to transfer account..
+        /// </summary>
+        internal static string TRANSFER_RESERVE {
+            get {
+                return ResourceManager.GetString("TRANSFER_RESERVE", resourceCulture);
             }
         }
         
@@ -174,15 +183,6 @@ namespace Grammophone.Domos.Accounting {
         internal static string UNBALANCED_POSTINGS {
             get {
                 return ResourceManager.GetString("UNBALANCED_POSTINGS", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Move withdrawed funds to outgoing transfer account..
-        /// </summary>
-        internal static string WITHDRAWAL_TRANSFER_DESCRIPTION {
-            get {
-                return ResourceManager.GetString("WITHDRAWAL_TRANSFER_DESCRIPTION", resourceCulture);
             }
         }
     }
