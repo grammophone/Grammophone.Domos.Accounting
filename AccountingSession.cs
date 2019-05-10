@@ -1021,23 +1021,6 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
-		/// Return true whether a request contains a successfully digested event of
-		/// type <see cref="FundsTransferEventType.Failed"/>, <see cref="FundsTransferEventType.Rejected"/>
-		/// or <see cref="FundsTransferEventType.Returned"/>.
-		/// </summary>
-		/// <param name="requestID">The ID of the request.</param>
-		private async Task<bool> FailureEventExistsForRequestAsync(long requestID)
-		{
-			var query = from e in this.DomainContainer.FundsTransferEvents
-									where e.RequestID == requestID && e.ExceptionData == null
-									where e.Type == FundsTransferEventType.Failed || e.Type == FundsTransferEventType.Rejected
-									|| e.Type == FundsTransferEventType.Returned
-									select e;
-
-			return await query.AnyAsync();
-		}
-
-		/// <summary>
 		/// Add an event for a funds tranfer request.
 		/// </summary>
 		/// <param name="requestID">The ID of the funds tranfer request.</param>
@@ -1724,6 +1707,23 @@ namespace Grammophone.Domos.Accounting
 			{
 				line.Account.Balance += line.Amount;
 			}
+		}
+
+		/// <summary>
+		/// Return true whether a request contains a successfully digested event of
+		/// type <see cref="FundsTransferEventType.Failed"/>, <see cref="FundsTransferEventType.Rejected"/>
+		/// or <see cref="FundsTransferEventType.Returned"/>.
+		/// </summary>
+		/// <param name="requestID">The ID of the request.</param>
+		private async Task<bool> FailureEventExistsForRequestAsync(long requestID)
+		{
+			var query = from e in this.DomainContainer.FundsTransferEvents
+									where e.RequestID == requestID && e.ExceptionData == null
+									where e.Type == FundsTransferEventType.Failed || e.Type == FundsTransferEventType.Rejected
+									|| e.Type == FundsTransferEventType.Returned
+									select e;
+
+			return await query.AnyAsync();
 		}
 
 		#endregion
