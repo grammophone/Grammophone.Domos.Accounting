@@ -4,25 +4,14 @@
     <Position X="0.5" Y="0.5" Width="3.5" />
     <Members>
       <Method Name="AmendAccounts" Hidden="true" />
-      <Method Name="CreateJournalForEntity" Hidden="true" />
-      <Method Name="CreateJournalForFundsTransferEvent" Hidden="true" />
-      <Method Name="CreatePostingForJournal" Hidden="true" />
-      <Method Name="CreateRemittanceForJournal" Hidden="true" />
-      <Method Name="EnsureSufficientBalances" Hidden="true" />
-      <Method Name="EnsureSufficientBalancesForFundsTransfer" Hidden="true" />
       <Field Name="entityListener" Hidden="true" />
-      <Method Name="ExecuteJournalAsync" Hidden="true" />
       <Method Name="FailureEventExistsForRequestAsync" Hidden="true" />
       <Method Name="GetOrCreateFundsTransferRequestGroupAsync" Hidden="true" />
       <Method Name="Initialize" Hidden="true" />
-      <Method Name="PredictAccountBalances" Hidden="true" />
       <Property Name="Settings" Hidden="true" />
       <Field Name="SettingsCacheSize" Hidden="true" />
       <Field Name="settingsFactory" Hidden="true" />
       <Method Name="SuccessEventExistsForRequestAsync" Hidden="true" />
-      <Method Name="ValidateJournal" Hidden="true" />
-      <Method Name="VisitJournalLines" Hidden="true" />
-      <Method Name="VisitJournalLinesAsync" Hidden="true" />
     </Members>
     <NestedTypes>
       <Class Name="Grammophone.Domos.Accounting.AccountingSession&lt;U, BST, P, R, J, D&gt;.ActionResult" Collapsed="true">
