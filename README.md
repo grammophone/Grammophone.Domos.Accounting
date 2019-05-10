@@ -1,13 +1,12 @@
 # Grammophone.Domos.Accounting
 This .NET Framework library provides a base for accounting for the Domos integrated session system.
-
-## Overview
-
 Typically it is used under [Grammophone.Domos.Logic](https://github.com/grammophone/Grammophone.Domos.Logic) but it is
 defined as a separate library to ease focus, separation of concerns and unit testing of accounting operations in a Domos
 entity space.
 
-It provides `AccountingSession` class as an abstract base to derive from in order to enrich it with the methods
+## Overview
+
+This library provides `AccountingSession` class as an abstract base to derive from in order to enrich it with the methods
 running your application. The class `AccountingSession` is provided with two generic variants.
 The first, `AccountingSession<U, BST, P, R, J, D>` understands the minimum required entities of Domos accounting domain,
 where `BST` is the base type for the state transitions of any stateful objects in the domain, `P` is the type
