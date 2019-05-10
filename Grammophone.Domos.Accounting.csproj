@@ -115,7 +115,9 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="AccountingSession.cd" />
+    <None Include="LICENSE.md" />
     <None Include="packages.config" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="AccountingMessages.resx">
