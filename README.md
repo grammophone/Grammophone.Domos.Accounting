@@ -13,7 +13,7 @@ where `BST` is the base type for the state transitions of any stateful objects i
 of accounting postings in the domain, `R` is the type of remittances in the domain, `J` is the type of accounting journals in
 the domain and `D` is the type of the domain container. If the optional invoice entities are used in the Domos domain,
 derive from the more specific `AccountingSession<U, BST, P, R, J, ILTC, IL, IE, I, D>`, where `I` is the type of invoices, `IL`
-is the type of invoice lines and `ILTC` is the type of tax components in a invoice line.
+is the type of invoice lines and `ILTC` is the type of tax components in an invoice line.
 
 ![AccountingSession diagram](Images/AccountingSession.png)
 
