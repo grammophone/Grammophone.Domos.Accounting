@@ -1910,13 +1910,16 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (invoice == null) throw new ArgumentNullException(nameof(invoice));
 
-			var lastInvoiceEvent = invoice.Events.OrderByDescending(i => i.Time).FirstOrDefault();
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				var lastInvoiceEvent = invoice.Events.OrderByDescending(i => i.Time).FirstOrDefault();
 
-			ValidateNewInvoiceEvent(invoiceEvent, lastInvoiceEvent);
+				ValidateNewInvoiceEvent(invoiceEvent, lastInvoiceEvent);
 
-			invoice.Events.Add(invoiceEvent);
+				invoice.Events.Add(invoiceEvent);
 
-			await this.DomainContainer.SaveChangesAsync();
+				await transaction.CommitAsync();
+			}
 		}
 
 		/// <summary>
@@ -1929,19 +1932,22 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (invoiceEvent == null) throw new ArgumentNullException(nameof(invoiceEvent));
 
-			var lastInvoiceEventQuery = from i in this.DomainContainer.Invoices
-																	where i.ID == invoiceID
-																	let le = i.Events.OrderByDescending(e => e.Time).FirstOrDefault()
-																	select le;
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				var lastInvoiceEventQuery = from i in this.DomainContainer.Invoices
+																		where i.ID == invoiceID
+																		let le = i.Events.OrderByDescending(e => e.Time).FirstOrDefault()
+																		select le;
 
-			var lastInvoiceEvent = await lastInvoiceEventQuery.SingleOrDefaultAsync();
+				var lastInvoiceEvent = await lastInvoiceEventQuery.SingleOrDefaultAsync();
 
-			ValidateNewInvoiceEvent(invoiceEvent, lastInvoiceEvent);
+				ValidateNewInvoiceEvent(invoiceEvent, lastInvoiceEvent);
 
-			this.DomainContainer.InvoiceEvents.Add(invoiceEvent);
-			invoiceEvent.InvoiceID = invoiceID;
+				this.DomainContainer.InvoiceEvents.Add(invoiceEvent);
+				invoiceEvent.InvoiceID = invoiceID;
 
-			await this.DomainContainer.SaveChangesAsync();
+				await transaction.CommitAsync();
+			}
 		}
 
 		#endregion
