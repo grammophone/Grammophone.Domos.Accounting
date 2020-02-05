@@ -427,7 +427,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
-		/// <param name="lineGroupingToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -443,7 +443,7 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string lineGroupingToken = null)
+			string accountHolderToken = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
@@ -460,7 +460,7 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				lineGroupingToken);
+				accountHolderToken);
 		}
 
 		/// <summary>
@@ -476,7 +476,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
-		/// <param name="lineGroupingToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -491,7 +491,7 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string lineGroupingToken = null)
+			string accountHolderToken = null)
 		{
 			if (bankingDetail == null) throw new ArgumentNullException(nameof(bankingDetail));
 
@@ -505,7 +505,7 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				lineGroupingToken);
+				accountHolderToken);
 		}
 
 		/// <summary>
@@ -521,7 +521,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
-		/// <param name="lineGroupingToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -536,7 +536,7 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string lineGroupingToken = null)
+			string accountHolderToken = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
@@ -552,7 +552,7 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				lineGroupingToken);
+				accountHolderToken);
 		}
 
 		/// <summary>
@@ -567,7 +567,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
-		/// <param name="lineGroupingToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -581,7 +581,7 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string lineGroupingToken = null)
+			string accountHolderToken = null)
 		{
 			if (bankingDetail == null) throw new ArgumentNullException(nameof(bankingDetail));
 
@@ -596,7 +596,7 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				lineGroupingToken);
+				accountHolderToken);
 		}
 
 		/// <summary>
@@ -608,7 +608,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
-		/// <param name="lineGroupingToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -621,7 +621,7 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string lineGroupingToken = null)
+			string accountHolderToken = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 
@@ -641,7 +641,7 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				lineGroupingToken);
+				accountHolderToken);
 		}
 
 		/// <summary>
@@ -1514,23 +1514,23 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		/// <param name="encryptedBankAccountInfo">The encrypted banking info.</param>
 		/// <param name="bankAccountHolderName">The name of the holder of the bank account.</param>
-		/// <param name="lineGroupingToken">Optional token identifying the holder of the bank account.</param>
+		/// <param name="accountHolderToken">Optional token identifying the holder of the bank account.</param>
 		/// <returns>Returns the requested group.</returns>
 		private async Task<FundsTransferRequestGroup> GetOrCreateFundsTransferRequestGroupAsync(
 			EncryptedBankAccountInfo encryptedBankAccountInfo,
 			string bankAccountHolderName,
-			string lineGroupingToken = null)
+			string accountHolderToken = null)
 		{
 			if (encryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(encryptedBankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
 
-			if (lineGroupingToken != null)
+			if (accountHolderToken != null)
 			{
-				if (lineGroupingToken.Length > FundsTransferRequestGroup.AccountHolderTokenLength)
+				if (accountHolderToken.Length > FundsTransferRequestGroup.AccountHolderTokenLength)
 				{
 					throw new ArgumentException(
 						$"The length of the token of the account holder must not be greater than {FundsTransferRequestGroup.AccountHolderTokenLength}.",
-						nameof(lineGroupingToken));
+						nameof(accountHolderToken));
 				}
 			}
 
@@ -1545,7 +1545,7 @@ namespace Grammophone.Domos.Accounting
 												 && g.EncryptedBankAccountInfo.EncryptedAccountNumber == encryptedBankAccountInfo.EncryptedAccountNumber
 												 && g.EncryptedBankAccountInfo.EncryptedTransitNumber == encryptedBankAccountInfo.EncryptedTransitNumber
 												 && g.AccountHolderName == bankAccountHolderName
-												 && g.AccountHolderToken == lineGroupingToken
+												 && g.AccountHolderToken == accountHolderToken
 												 select g;
 
 				var group = await groupQuery.SingleOrDefaultAsync();
@@ -1562,7 +1562,7 @@ namespace Grammophone.Domos.Accounting
 
 				group.EncryptedBankAccountInfo = encryptedBankAccountInfo.Clone(this.DomainContainer);
 				group.AccountHolderName = bankAccountHolderName;
-				group.AccountHolderToken = lineGroupingToken;
+				group.AccountHolderToken = accountHolderToken;
 
 				await transaction.CommitAsync();
 
@@ -1584,7 +1584,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batchID">Optional ID of the batch.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
-		/// <param name="lineGroupingToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -1600,7 +1600,7 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string lineGroupingToken = null)
+			string accountHolderToken = null)
 		{
 			if (encryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(encryptedBankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
@@ -1618,7 +1618,7 @@ namespace Grammophone.Domos.Accounting
 				request.BatchID = batchID;
 				request.MainAccount = mainAccount;
 				request.TransferAccount = amount > 0.0M ? transferAccount : null; // Transfer is only needed during withdrawal.
-				request.Group = await GetOrCreateFundsTransferRequestGroupAsync(encryptedBankAccountInfo, bankAccountHolderName, lineGroupingToken);
+				request.Group = await GetOrCreateFundsTransferRequestGroupAsync(encryptedBankAccountInfo, bankAccountHolderName, accountHolderToken);
 				request.Comments = requestComments;
 
 				long? pendingBatchMessageID = null;
@@ -1668,7 +1668,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
-		/// <param name="lineGroupingToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -1683,7 +1683,7 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string lineGroupingToken = null)
+			string accountHolderToken = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
@@ -1698,7 +1698,7 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				lineGroupingToken);
+				accountHolderToken);
 		}
 
 		/// <summary>
