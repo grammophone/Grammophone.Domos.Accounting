@@ -27,7 +27,7 @@ namespace Grammophone.Domos.Accounting
 	{
 		#region Private fields
 
-		private static Lazy<SymmetricAlgorithm> lazyEncryptionAlgorithm;
+		private static readonly Lazy<SymmetricAlgorithm> lazyEncryptionAlgorithm;
 
 		#endregion
 
@@ -47,6 +47,8 @@ namespace Grammophone.Domos.Accounting
 
 		#region Public methods
 
+		#region BankAccountInfo
+
 		/// <summary>
 		/// Decrypt a <see cref="EncryptedBankAccountInfo"/> into 
 		/// a <see cref="BankAccountInfo"/>.
@@ -57,14 +59,12 @@ namespace Grammophone.Domos.Accounting
 		{
 			if (encryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(encryptedBankAccountInfo));
 
-			var algorithm = lazyEncryptionAlgorithm.Value;
-
 			return new BankAccountInfo
 			{
 				AccountCode = encryptedBankAccountInfo.AccountCode,
 				BankNumber = encryptedBankAccountInfo.BankNumber,
-				AccountNumber = DecryptText(algorithm, encryptedBankAccountInfo.EncryptedAccountNumber),
-				TransitNumber = DecryptText(algorithm, encryptedBankAccountInfo.EncryptedTransitNumber)
+				AccountNumber = DecryptString(encryptedBankAccountInfo.EncryptedAccountNumber),
+				TransitNumber = DecryptString(encryptedBankAccountInfo.EncryptedTransitNumber)
 			};
 		}
 
@@ -85,14 +85,12 @@ namespace Grammophone.Domos.Accounting
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 			if (domainContainer == null) throw new ArgumentNullException(nameof(domainContainer));
 
-			var algorithm = lazyEncryptionAlgorithm.Value;
-
 			var encryptedInfo = new EncryptedBankAccountInfo
 			{
 				BankNumber = bankAccountInfo.BankNumber,
 				AccountCode = bankAccountInfo.AccountCode,
-				EncryptedAccountNumber = EncryptText(algorithm, bankAccountInfo.AccountNumber),
-				EncryptedTransitNumber = EncryptText(algorithm, bankAccountInfo.TransitNumber)
+				EncryptedAccountNumber = EncryptString(bankAccountInfo.AccountNumber),
+				EncryptedTransitNumber = EncryptString(bankAccountInfo.TransitNumber)
 			};
 
 			return encryptedInfo;
@@ -124,6 +122,108 @@ namespace Grammophone.Domos.Accounting
 
 			return clonedInfo;
 		}
+
+		#endregion
+
+		#region string
+
+		/// <summary>
+		/// Encrypt a string.
+		/// </summary>
+		/// <param name="value">The string to be encrypted.</param>
+		/// <returns>Returns the byte array of the encrypted string.</returns>
+		public static byte[] EncryptString(string value)
+		{
+			if (value == null) throw new ArgumentNullException(nameof(value));
+
+			var encryptor = lazyEncryptionAlgorithm.Value.CreateEncryptor();
+
+			using (var memoryStream = new MemoryStream())
+			{
+				using (var cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
+				{
+					using (var writer = new StreamWriter(cryptoStream))
+					{
+						writer.Write(value);
+					}
+
+					return memoryStream.ToArray();
+				}
+			}
+		}
+
+		/// <summary>
+		/// Decrypt an encrypted string.
+		/// </summary>
+		/// <param name="encryptedText">The byte array holding the encrypted string.</param>
+		/// <returns>Returns the decrypted string.</returns>
+		public static string DecryptString(byte[] encryptedText)
+		{
+			if (encryptedText == null) return null;
+
+			var decryptor = lazyEncryptionAlgorithm.Value.CreateDecryptor();
+
+			using (var memoryStream = new MemoryStream(encryptedText))
+			{
+				using (var cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
+				{
+					using (var reader = new StreamReader(cryptoStream))
+					{
+						return reader.ReadToEnd();
+					}
+				}
+			}
+		}
+
+		#endregion
+
+		#region decimal
+
+		/// <summary>
+		/// Encrypt a decimal value.
+		/// </summary>
+		/// <param name="value">The value to encrypt.</param>
+		/// <returns>Returns byte array of for the encrypted value.</returns>
+		public static byte[] EncryptDecimal(decimal value)
+		{
+			var encryptor = lazyEncryptionAlgorithm.Value.CreateEncryptor();
+
+			using (var memoryStream = new MemoryStream())
+			{
+				using (var cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
+				{
+					using (var writer = new BinaryWriter(cryptoStream))
+					{
+						writer.Write(value);
+					}
+
+					return memoryStream.ToArray();
+				}
+			}
+		}
+
+		/// <summary>
+		/// Decrypt a decimal value.
+		/// </summary>
+		/// <param name="encryptedDecimal">The array of bytes holding the encrypted value.</param>
+		/// <returns>Returns the decrypted decimal.</returns>
+		public static decimal DecryptDecimal(byte[] encryptedDecimal)
+		{
+			var decryptor = lazyEncryptionAlgorithm.Value.CreateDecryptor();
+
+			using (var memoryStream = new MemoryStream(encryptedDecimal))
+			{
+				using (var cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
+				{
+					using (var reader = new BinaryReader(cryptoStream))
+					{
+						return reader.ReadDecimal();
+					}
+				}
+			}
+		}
+
+		#endregion
 
 		#endregion
 
@@ -182,51 +282,6 @@ namespace Grammophone.Domos.Accounting
 			algorithm.IV = iv;
 
 			return algorithm;
-		}
-
-		/// <summary>
-		/// Encrypt a <paramref name="text"/> using an encryption <paramref name="algorithm"/>.
-		/// </summary>
-		private static byte[] EncryptText(SymmetricAlgorithm algorithm, string text)
-		{
-			if (text == null) throw new ArgumentNullException(nameof(text));
-
-			var encryptor = algorithm.CreateEncryptor();
-
-			using (var memoryStream = new MemoryStream())
-			{
-				using (var cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
-				{
-					using (var writer = new StreamWriter(cryptoStream))
-					{
-						writer.Write(text);
-					}
-
-					return memoryStream.ToArray();
-				}
-			}
-		}
-
-		/// <summary>
-		/// Decrypt an <paramref name="encryptedText"/> byte array
-		/// using an encryption <paramref name="algorithm"/>.
-		/// </summary>
-		private static string DecryptText(SymmetricAlgorithm algorithm, byte[] encryptedText)
-		{
-			if (encryptedText == null) return null;
-
-			var decryptor = algorithm.CreateDecryptor();
-
-			using (var memoryStream = new MemoryStream(encryptedText))
-			{
-				using (var cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
-				{
-					using (var reader = new StreamReader(cryptoStream))
-					{
-						return reader.ReadToEnd();
-					}
-				}
-			}
 		}
 
 		#endregion
