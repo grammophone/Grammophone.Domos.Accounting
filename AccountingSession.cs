@@ -1649,7 +1649,7 @@ namespace Grammophone.Domos.Accounting
 					FundsTransferEventType.Pending,
 					asyncJournalAppendAction,
 					pendingBatchMessageID,
-					pendingEventComments);
+					comments: pendingEventComments);
 
 				await transaction.CommitAsync();
 
