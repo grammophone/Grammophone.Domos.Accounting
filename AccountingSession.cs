@@ -423,6 +423,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="transferAccount">The transfer account for outgoing funds, if <paramref name="amount"/> is positive, otherwise ignored.</param>
+		/// <param name="category">Optional application-defined category for the request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
@@ -439,6 +440,7 @@ namespace Grammophone.Domos.Accounting
 			decimal amount,
 			Account mainAccount,
 			Account transferAccount,
+			int category = 0,
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
@@ -456,6 +458,7 @@ namespace Grammophone.Domos.Accounting
 				amount,
 				mainAccount,
 				transferAccount,
+				category,
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
@@ -472,6 +475,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="transferAccount">The transfer account for outgoing funds, if <paramref name="amount"/> is positive, otherwise ignored.</param>
+		/// <param name="category">Optional application-defined category for the request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
@@ -487,6 +491,7 @@ namespace Grammophone.Domos.Accounting
 			decimal amount,
 			Account mainAccount,
 			Account transferAccount,
+			int category = 0,
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
@@ -501,6 +506,7 @@ namespace Grammophone.Domos.Accounting
 				amount,
 				mainAccount,
 				transferAccount,
+				category,
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
@@ -517,6 +523,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="bankAccountInfo">An account info to be assigned to the request.</param>
 		/// <param name="bankAccountHolderName">The name of the holder of the bank account.</param>
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
+		/// <param name="category">Optional application-defined category for the request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
@@ -532,6 +539,7 @@ namespace Grammophone.Domos.Accounting
 			BankAccountInfo bankAccountInfo,
 			string bankAccountHolderName,
 			decimal amount,
+			int category = 0,
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
@@ -548,6 +556,7 @@ namespace Grammophone.Domos.Accounting
 				encryptedBankAccountInfo,
 				bankAccountHolderName,
 				amount,
+				category,
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
@@ -563,6 +572,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="transferableFundsHolder">The holder of funds.</param>
 		/// <param name="bankingDetail">Banking details to be assigned to the request.</param>
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
+		/// <param name="category">Optional application-defined category for the request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
@@ -577,6 +587,7 @@ namespace Grammophone.Domos.Accounting
 			ITransferableFundsHolder transferableFundsHolder,
 			IBankingDetail bankingDetail,
 			decimal amount,
+			int category = 0,
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
@@ -592,6 +603,7 @@ namespace Grammophone.Domos.Accounting
 				encryptedBankAccountInfo,
 				bankingDetail.GetBankAccountHolderName(),
 				amount,
+				category,
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
@@ -604,6 +616,7 @@ namespace Grammophone.Domos.Accounting
 		/// </summary>
 		/// <param name="transferableFundsHolder">The holder of funds and owner of bank account.</param>
 		/// <param name="amount">The amount to withdraw.</param>
+		/// <param name="category">Optional application-defined category for the request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
@@ -617,6 +630,7 @@ namespace Grammophone.Domos.Accounting
 		public async Task<ActionResult> CreateFundsTransferRequestAsync(
 			ITransferableFundsHolderWithBankAccount transferableFundsHolder,
 			decimal amount,
+			int category = 0,
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
@@ -637,6 +651,7 @@ namespace Grammophone.Domos.Accounting
 				bankAccountDetail.EncryptedBankAccountInfo,
 				bankAccountDetail.GetBankAccountHolderName(),
 				amount,
+				category,
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
@@ -1580,6 +1595,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
 		/// <param name="mainAccount">The main account being charged.</param>
 		/// <param name="transferAccount">The transfer account for outgoing funds, if <paramref name="amount"/> is positive, otherwise ignored.</param>
+		/// <param name="category">Optional application-defined category for the request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional ID of the batch.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
@@ -1596,6 +1612,7 @@ namespace Grammophone.Domos.Accounting
 			decimal amount,
 			Account mainAccount,
 			Account transferAccount,
+			int category = 0,
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
@@ -1616,6 +1633,7 @@ namespace Grammophone.Domos.Accounting
 				request.Amount = amount;
 				request.GUID = Guid.NewGuid();
 				request.BatchID = batchID;
+				request.Category = category;
 				request.MainAccount = mainAccount;
 				request.TransferAccount = amount > 0.0M ? transferAccount : null; // Transfer is only needed during withdrawal.
 				request.Group = await GetOrCreateFundsTransferRequestGroupAsync(encryptedBankAccountInfo, bankAccountHolderName, accountHolderToken);
@@ -1664,6 +1682,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="bankAccountHolderName">The name of the holder of the bank account.</param>
 		/// <param name="encryptedBankAccountInfo">An account info to be assigned to the request.</param>
 		/// <param name="amount">The amount of the transfer to the external system, positive for deposit, negative for withdrawal.</param>
+		/// <param name="category">Optional application-defined category for the request.</param>
 		/// <param name="asyncJournalAppendAction">An optional function to append lines to the associated journal.</param>
 		/// <param name="batchID">Optional batch ID of the funds request.</param>
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
@@ -1679,6 +1698,7 @@ namespace Grammophone.Domos.Accounting
 			EncryptedBankAccountInfo encryptedBankAccountInfo,
 			string bankAccountHolderName,
 			decimal amount,
+			int category = 0,
 			Func<J, Task> asyncJournalAppendAction = null,
 			long? batchID = null,
 			string requestComments = null,
@@ -1694,6 +1714,7 @@ namespace Grammophone.Domos.Accounting
 				amount,
 				transferableFundsHolder.MainAccount,
 				transferableFundsHolder.TransferAccount,
+				category,
 				asyncJournalAppendAction,
 				batchID,
 				requestComments,
