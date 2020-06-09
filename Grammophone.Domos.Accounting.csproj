@@ -57,5 +57,7 @@
   <ItemGroup>
     <Content Include="Images\AccountingSession.png" />
     <Content Include="Images\AccountingDomain.png" />
-  </ItemGroup>
+		<None Remove=".git" />
+		<None Remove=".gitignore" />
+	</ItemGroup>
 </Project>
