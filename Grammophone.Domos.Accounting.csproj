@@ -1,137 +1,55 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\..\packages\EntityFramework.6.4.4\build\EntityFramework.props" Condition="Exists('..\..\packages\EntityFramework.6.4.4\build\EntityFramework.props')" />
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{9C4E7187-4243-4FB3-A0DB-D9347828FF40}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Grammophone.Domos.Accounting</RootNamespace>
-    <AssemblyName>Grammophone.Domos.Accounting</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyTitle>Grammophone.Domos.Accounting</AssemblyTitle>
+    <Product>Grammophone.Domos.Accounting</Product>
+    <Copyright>Copyright ©  2016</Copyright>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <DocumentationFile>bin\$(Configuration)\Grammophone.Domos.Accounting.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\Grammophone.Domos.Accounting.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\Grammophone.Domos.Accounting.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.dll</HintPath>
-    </Reference>
-    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.SqlServer.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Practices.Unity, Version=3.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Unity.3.5.1404.0\lib\net45\Microsoft.Practices.Unity.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Microsoft.Practices.Unity.Configuration, Version=3.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Unity.3.5.1404.0\lib\net45\Microsoft.Practices.Unity.Configuration.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Microsoft.Practices.Unity.RegistrationByConvention, Version=3.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Unity.3.5.1404.0\lib\net45\Microsoft.Practices.Unity.RegistrationByConvention.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.ComponentModel.DataAnnotations" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
-    <Reference Include="Z.EntityFramework.Extensions, Version=4.0.72.0, Culture=neutral, PublicKeyToken=59b66d028979105b, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Z.EntityFramework.Extensions.4.0.72\lib\net45\Z.EntityFramework.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="Z.EntityFramework.Plus.EF6, Version=1.12.22.0, Culture=neutral, PublicKeyToken=59b66d028979105b, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Z.EntityFramework.Plus.EF6.1.12.22\lib\net45\Z.EntityFramework.Plus.EF6.dll</HintPath>
-    </Reference>
-    <Reference Include="Z.Expressions.Eval, Version=3.1.11.0, Culture=neutral, PublicKeyToken=59b66d028979105b, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Z.Expressions.Eval.3.1.11\lib\net45\Z.Expressions.Eval.dll</HintPath>
-    </Reference>
+    <PackageReference Include="EntityFramework" Version="6.4.4" />
+    <PackageReference Include="Unity" Version="3.5.1404.0" />
+    <PackageReference Include="Z.EntityFramework.Plus.EF6" Version="1.12.22" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AccountingEncryption.cs" />
-    <Compile Include="AccountingException.cs" />
-    <Compile Include="AccountingExtensions.cs" />
-    <Compile Include="AccountingMessages.Designer.cs">
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="AccountingMessages.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>AccountingMessages.resx</DependentUpon>
     </Compile>
-    <Compile Include="AccountingSession.cs" />
-    <Compile Include="BalanceException.cs" />
-    <Compile Include="JournalAlreadyExecutedException.cs" />
-    <Compile Include="Models\BankAccountInfo.cs" />
-    <Compile Include="Models\BankAccountInfoResources.Designer.cs">
+    <Compile Update="Models\BankAccountInfoResources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>BankAccountInfoResources.resx</DependentUpon>
     </Compile>
-    <Compile Include="NegativeBalanceException.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Grammophone.Caching\Grammophone.Caching.csproj">
-      <Project>{2c834c5b-aa21-43fa-826e-398ab4de25ac}</Project>
-      <Name>Grammophone.Caching</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Grammophone.DataAccess\Grammophone.DataAccess.csproj">
-      <Project>{c9030969-1247-4ee9-bf68-782c1d676c8f}</Project>
-      <Name>Grammophone.DataAccess</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Grammophone.Domos.DataAccess\Grammophone.Domos.DataAccess.csproj">
-      <Project>{02d58dc8-ab2f-4120-88d7-358b2456f58f}</Project>
-      <Name>Grammophone.Domos.DataAccess</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Grammophone.Domos.Domain\Grammophone.Domos.Domain.csproj">
-      <Project>{d758ee48-75df-42d6-b6d4-9fabdae41f1c}</Project>
-      <Name>Grammophone.Domos.Domain</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Grammophone.Serialization\Grammophone.Serialization.csproj">
-      <Project>{b0e855cb-8a43-4623-8184-31cd4b4ebb57}</Project>
-      <Name>Grammophone.Serialization</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Grammophone.Setup\Grammophone.Setup.csproj">
-      <Project>{acd1f5c9-a8b1-46d1-a6be-f6027fe91017}</Project>
-      <Name>Grammophone.Setup</Name>
-    </ProjectReference>
+    <ProjectReference Include="..\Grammophone.Caching\Grammophone.Caching.csproj" />
+    <ProjectReference Include="..\Grammophone.DataAccess\Grammophone.DataAccess.csproj" />
+    <ProjectReference Include="..\Grammophone.Domos.DataAccess\Grammophone.Domos.DataAccess.csproj" />
+    <ProjectReference Include="..\Grammophone.Domos.Domain\Grammophone.Domos.Domain.csproj" />
+    <ProjectReference Include="..\Grammophone.Serialization\Grammophone.Serialization.csproj" />
+    <ProjectReference Include="..\Grammophone.Setup\Grammophone.Setup.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="AccountingSession.cd" />
     <None Include="LICENSE.md" />
-    <None Include="packages.config" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="AccountingMessages.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>AccountingMessages.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Models\BankAccountInfoResources.fr.resx" />
-    <EmbeddedResource Include="Models\BankAccountInfoResources.resx">
+    <EmbeddedResource Update="Models\BankAccountInfoResources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>BankAccountInfoResources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
@@ -140,12 +58,4 @@
     <Content Include="Images\AccountingSession.png" />
     <Content Include="Images\AccountingDomain.png" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>
