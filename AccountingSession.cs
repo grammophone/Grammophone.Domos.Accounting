@@ -399,8 +399,13 @@ namespace Grammophone.Domos.Accounting
 
 					await pendingEvents.UpdateAsync(e => new FundsTransferEvent { BatchMessageID = pendingBatchMessage.ID });
 
+					// Don't use 'requests' directly for batch update because it fails when called by a CompositeFundsTransferManager due to some EF+ bug.
+					var pendingRequests = from pr in this.DomainContainer.FundsTransferRequests
+																where requests.Any(r => r.ID == pr.ID)
+																select pr;
+
 					// Now that the events are updated, safely update the requests to have a batch.
-					await requests.UpdateAsync(r => new FundsTransferRequest { BatchID = pendingBatchMessage.BatchID });
+					await pendingRequests.UpdateAsync(r => new FundsTransferRequest { BatchID = pendingBatchMessage.BatchID });
 				}
 				catch (SystemException ex) // Translation exception is needed for the batch update operations.
 				{
