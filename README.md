@@ -1,5 +1,5 @@
 # Grammophone.Domos.Accounting
-This .NET Framework library provides a base for accounting for the Domos integrated session system.
+This dual-target .NET Framework and .NET Standard 2.1 library provides a base for accounting for the Domos integrated session system.
 Typically it is used under [Grammophone.Domos.Logic](https://github.com/grammophone/Grammophone.Domos.Logic) but it is
 defined as a separate library to ease focus, separation of concerns and unit testing of accounting operations in a Domos
 entity space.
