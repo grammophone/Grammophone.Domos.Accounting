@@ -1495,39 +1495,6 @@ namespace Grammophone.Domos.Accounting
 			EnsureSufficientBalances(journal);
 		}
 
-		#endregion
-
-		#region Private methods
-
-		private void Initialize(D domainContainer, U agent)
-		{
-			this.DomainContainer = domainContainer;
-			this.Agent = agent;
-
-			// Does the container have user tracking? If not, add our own.
-			bool hasUserTracking = 
-				domainContainer.EntityListeners.Any(el => el is IUserTrackingEntityListener);
-
-			if (!hasUserTracking)
-			{
-				entityListener = new EntityListener(agent.ID);
-				domainContainer.EntityListeners.Add(entityListener);
-			}
-		}
-
-		/// <summary>
-		/// Returns whether a success event exists for a funds transfer request.
-		/// </summary>
-		/// <param name="requestID">The ID of the funds transfer request.</param>
-		private async Task<bool> SuccessEventExistsForRequestAsync(long requestID)
-		{
-			var previousSuccessEventQuery = from e in this.DomainContainer.FundsTransferEvents
-																			where e.RequestID == requestID && e.Type == FundsTransferEventType.Succeeded
-																			select e;
-
-			return await previousSuccessEventQuery.AnyAsync();
-		}
-
 		/// <summary>
 		/// Get, or create if it does not exit, a <see cref="FundsTransferRequestGroup"/> for the
 		/// supplied encrypted banking info.
@@ -1536,7 +1503,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="bankAccountHolderName">The name of the holder of the bank account.</param>
 		/// <param name="accountHolderToken">Optional token identifying the holder of the bank account.</param>
 		/// <returns>Returns the requested group.</returns>
-		private async Task<FundsTransferRequestGroup> GetOrCreateFundsTransferRequestGroupAsync(
+		protected async Task<FundsTransferRequestGroup> GetOrCreateFundsTransferRequestGroupAsync(
 			EncryptedBankAccountInfo encryptedBankAccountInfo,
 			string bankAccountHolderName,
 			string accountHolderToken = null)
@@ -1588,6 +1555,39 @@ namespace Grammophone.Domos.Accounting
 
 				return group;
 			}
+		}
+
+		#endregion
+
+		#region Private methods
+
+		private void Initialize(D domainContainer, U agent)
+		{
+			this.DomainContainer = domainContainer;
+			this.Agent = agent;
+
+			// Does the container have user tracking? If not, add our own.
+			bool hasUserTracking = 
+				domainContainer.EntityListeners.Any(el => el is IUserTrackingEntityListener);
+
+			if (!hasUserTracking)
+			{
+				entityListener = new EntityListener(agent.ID);
+				domainContainer.EntityListeners.Add(entityListener);
+			}
+		}
+
+		/// <summary>
+		/// Returns whether a success event exists for a funds transfer request.
+		/// </summary>
+		/// <param name="requestID">The ID of the funds transfer request.</param>
+		private async Task<bool> SuccessEventExistsForRequestAsync(long requestID)
+		{
+			var previousSuccessEventQuery = from e in this.DomainContainer.FundsTransferEvents
+																			where e.RequestID == requestID && e.Type == FundsTransferEventType.Succeeded
+																			select e;
+
+			return await previousSuccessEventQuery.AnyAsync();
 		}
 
 		/// <summary>
