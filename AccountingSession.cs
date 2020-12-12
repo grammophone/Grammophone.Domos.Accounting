@@ -1187,6 +1187,68 @@ namespace Grammophone.Domos.Accounting
 				.Select(m => m.Batch);
 		}
 
+		/// <summary>
+		/// Get, or create if it does not exit, a <see cref="FundsTransferRequestGroup"/> for the
+		/// supplied encrypted banking info.
+		/// </summary>
+		/// <param name="encryptedBankAccountInfo">The encrypted banking info.</param>
+		/// <param name="bankAccountHolderName">The name of the holder of the bank account.</param>
+		/// <param name="accountHolderToken">Optional token identifying the holder of the bank account.</param>
+		/// <returns>Returns the requested group.</returns>
+		public async Task<FundsTransferRequestGroup> GetOrCreateFundsTransferRequestGroupAsync(
+			EncryptedBankAccountInfo encryptedBankAccountInfo,
+			string bankAccountHolderName,
+			string accountHolderToken = null)
+		{
+			if (encryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(encryptedBankAccountInfo));
+			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
+
+			if (accountHolderToken != null)
+			{
+				if (accountHolderToken.Length > FundsTransferRequestGroup.AccountHolderTokenLength)
+				{
+					throw new ArgumentException(
+						$"The length of the token of the account holder must not be greater than {FundsTransferRequestGroup.AccountHolderTokenLength}.",
+						nameof(accountHolderToken));
+				}
+			}
+
+			if (bankAccountHolderName.Length > FundsTransferRequestGroup.AccountHolderNameLength) // Clip length of bank account holder name if necessary
+				bankAccountHolderName = bankAccountHolderName.Substring(0, FundsTransferRequestGroup.AccountHolderNameLength);
+
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				var groupQuery = from g in this.DomainContainer.FundsTransferRequestGroups
+												 where g.EncryptedBankAccountInfo.AccountCode == encryptedBankAccountInfo.AccountCode
+												 && g.EncryptedBankAccountInfo.BankNumber == encryptedBankAccountInfo.BankNumber
+												 && g.EncryptedBankAccountInfo.EncryptedAccountNumber == encryptedBankAccountInfo.EncryptedAccountNumber
+												 && g.EncryptedBankAccountInfo.EncryptedTransitNumber == encryptedBankAccountInfo.EncryptedTransitNumber
+												 && g.AccountHolderName == bankAccountHolderName
+												 && g.AccountHolderToken == accountHolderToken
+												 select g;
+
+				var group = await groupQuery.SingleOrDefaultAsync();
+
+				if (group != null)
+				{
+					transaction.Pass();
+
+					return group;
+				}
+
+				group = this.DomainContainer.FundsTransferRequestGroups.Create();
+				this.DomainContainer.FundsTransferRequestGroups.Add(group);
+
+				group.EncryptedBankAccountInfo = encryptedBankAccountInfo.Clone(this.DomainContainer);
+				group.AccountHolderName = bankAccountHolderName;
+				group.AccountHolderToken = accountHolderToken;
+
+				await transaction.CommitAsync();
+
+				return group;
+			}
+		}
+
 		#endregion
 
 		#region Protected methods
@@ -1493,68 +1555,6 @@ namespace Grammophone.Domos.Accounting
 		protected virtual void EnsureSufficientBalancesForFundsTransfer(FundsTransferEvent fundsTransferEvent, J journal)
 		{
 			EnsureSufficientBalances(journal);
-		}
-
-		/// <summary>
-		/// Get, or create if it does not exit, a <see cref="FundsTransferRequestGroup"/> for the
-		/// supplied encrypted banking info.
-		/// </summary>
-		/// <param name="encryptedBankAccountInfo">The encrypted banking info.</param>
-		/// <param name="bankAccountHolderName">The name of the holder of the bank account.</param>
-		/// <param name="accountHolderToken">Optional token identifying the holder of the bank account.</param>
-		/// <returns>Returns the requested group.</returns>
-		protected async Task<FundsTransferRequestGroup> GetOrCreateFundsTransferRequestGroupAsync(
-			EncryptedBankAccountInfo encryptedBankAccountInfo,
-			string bankAccountHolderName,
-			string accountHolderToken = null)
-		{
-			if (encryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(encryptedBankAccountInfo));
-			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
-
-			if (accountHolderToken != null)
-			{
-				if (accountHolderToken.Length > FundsTransferRequestGroup.AccountHolderTokenLength)
-				{
-					throw new ArgumentException(
-						$"The length of the token of the account holder must not be greater than {FundsTransferRequestGroup.AccountHolderTokenLength}.",
-						nameof(accountHolderToken));
-				}
-			}
-
-			if (bankAccountHolderName.Length > FundsTransferRequestGroup.AccountHolderNameLength) // Clip length of bank account holder name if necessary
-				bankAccountHolderName = bankAccountHolderName.Substring(0, FundsTransferRequestGroup.AccountHolderNameLength);
-
-			using (var transaction = this.DomainContainer.BeginTransaction())
-			{
-				var groupQuery = from g in this.DomainContainer.FundsTransferRequestGroups
-												 where g.EncryptedBankAccountInfo.AccountCode == encryptedBankAccountInfo.AccountCode
-												 && g.EncryptedBankAccountInfo.BankNumber == encryptedBankAccountInfo.BankNumber
-												 && g.EncryptedBankAccountInfo.EncryptedAccountNumber == encryptedBankAccountInfo.EncryptedAccountNumber
-												 && g.EncryptedBankAccountInfo.EncryptedTransitNumber == encryptedBankAccountInfo.EncryptedTransitNumber
-												 && g.AccountHolderName == bankAccountHolderName
-												 && g.AccountHolderToken == accountHolderToken
-												 select g;
-
-				var group = await groupQuery.SingleOrDefaultAsync();
-
-				if (group != null)
-				{
-					transaction.Pass();
-
-					return group;
-				}
-
-				group = this.DomainContainer.FundsTransferRequestGroups.Create();
-				this.DomainContainer.FundsTransferRequestGroups.Add(group);
-
-				group.EncryptedBankAccountInfo = encryptedBankAccountInfo.Clone(this.DomainContainer);
-				group.AccountHolderName = bankAccountHolderName;
-				group.AccountHolderToken = accountHolderToken;
-
-				await transaction.CommitAsync();
-
-				return group;
-			}
 		}
 
 		#endregion
