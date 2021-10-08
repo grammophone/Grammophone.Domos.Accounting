@@ -965,7 +965,9 @@ namespace Grammophone.Domos.Accounting
 											journal = CreateJournalForFundsTransferEvent(transferEvent);
 
 											await OnIngoingFundsTransferReturnAsync(transferEvent, journal);
-
+										}
+										else
+										{
 											inhibitJournalAppend = true;
 										}
 										break;
