@@ -1196,14 +1196,25 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="encryptedBankAccountInfo">The encrypted banking info.</param>
 		/// <param name="bankAccountHolderName">The name of the holder of the bank account.</param>
 		/// <param name="accountHolderToken">Optional token identifying the holder of the bank account.</param>
+		/// <param name="effectiveDate">Optional effective date in UTC for the request, or null to be executed as soon as possible.</param>
 		/// <returns>Returns the requested group.</returns>
 		public async Task<FundsTransferRequestGroup> GetOrCreateFundsTransferRequestGroupAsync(
 			EncryptedBankAccountInfo encryptedBankAccountInfo,
 			string bankAccountHolderName,
-			string accountHolderToken = null)
+			string accountHolderToken = null,
+			DateTime? effectiveDate = null)
 		{
 			if (encryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(encryptedBankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
+
+			if (effectiveDate.HasValue)
+			{
+				if (effectiveDate.Value.Kind == DateTimeKind.Local) throw new ArgumentException("The effective date should not be in local time.", nameof(effectiveDate));
+
+				var utcNow = DateTime.UtcNow;
+
+				if (effectiveDate < utcNow) effectiveDate = null; // If earlier than now, set to null to signal 'as soon as possible'.
+			}
 
 			if (accountHolderToken != null)
 			{
@@ -1227,6 +1238,7 @@ namespace Grammophone.Domos.Accounting
 												 && g.EncryptedBankAccountInfo.EncryptedTransitNumber == encryptedBankAccountInfo.EncryptedTransitNumber
 												 && g.AccountHolderName == bankAccountHolderName
 												 && g.AccountHolderToken == accountHolderToken
+												 && g.EffectiveDate == effectiveDate
 												 select g;
 
 				var group = await groupQuery.SingleOrDefaultAsync();
