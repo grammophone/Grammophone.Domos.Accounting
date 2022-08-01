@@ -434,6 +434,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="effectiveDate">Optional effective date in UTC for the request, or null to be executed as soon as possible.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -450,7 +451,8 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string accountHolderToken = null)
+			string accountHolderToken = null,
+			DateTime? effectiveDate = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
@@ -468,7 +470,8 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				accountHolderToken);
+				accountHolderToken,
+				effectiveDate);
 		}
 
 		/// <summary>
@@ -486,6 +489,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="effectiveDate">Optional effective date in UTC for the request, or null to be executed as soon as possible.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -501,7 +505,8 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string accountHolderToken = null)
+			string accountHolderToken = null,
+			DateTime? effectiveDate = null)
 		{
 			if (bankingDetail == null) throw new ArgumentNullException(nameof(bankingDetail));
 
@@ -516,7 +521,8 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				accountHolderToken);
+				accountHolderToken,
+				effectiveDate);
 		}
 
 		/// <summary>
@@ -534,6 +540,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="effectiveDate">Optional effective date in UTC for the request, or null to be executed as soon as possible.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -549,7 +556,8 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string accountHolderToken = null)
+			string accountHolderToken = null,
+			DateTime? effectiveDate = null)
 		{
 			if (bankAccountInfo == null) throw new ArgumentNullException(nameof(bankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
@@ -566,7 +574,8 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				accountHolderToken);
+				accountHolderToken,
+				effectiveDate);
 		}
 
 		/// <summary>
@@ -583,6 +592,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="effectiveDate">Optional effective date in UTC for the request, or null to be executed as soon as possible.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -597,7 +607,8 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string accountHolderToken = null)
+			string accountHolderToken = null,
+			DateTime? effectiveDate = null)
 		{
 			if (bankingDetail == null) throw new ArgumentNullException(nameof(bankingDetail));
 
@@ -613,7 +624,8 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				accountHolderToken);
+				accountHolderToken,
+				effectiveDate);
 		}
 
 		/// <summary>
@@ -627,6 +639,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="effectiveDate">Optional effective date in UTC for the request, or null to be executed as soon as possible.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -640,7 +653,8 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string accountHolderToken = null)
+			string accountHolderToken = null,
+			DateTime? effectiveDate = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 
@@ -661,7 +675,8 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				accountHolderToken);
+				accountHolderToken,
+				effectiveDate);
 		}
 
 		/// <summary>
@@ -1620,6 +1635,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="effectiveDate">Optional effective date in UTC for the request, or null to be executed as soon as possible.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -1636,13 +1652,23 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string accountHolderToken = null)
+			string accountHolderToken = null,
+			DateTime? effectiveDate = null)
 		{
 			if (encryptedBankAccountInfo == null) throw new ArgumentNullException(nameof(encryptedBankAccountInfo));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
 			if (mainAccount == null) throw new ArgumentNullException(nameof(mainAccount));
 			if (amount > 0.0M && transferAccount == null) throw new ArgumentNullException(nameof(transferAccount));
 			if (amount == 0.0M) throw new ArgumentException("The amount must not be zero.", nameof(amount));
+
+			if (effectiveDate.HasValue)
+			{
+				if (effectiveDate.Value.Kind == DateTimeKind.Local) throw new ArgumentException("The effective date should not be in local time.", nameof(effectiveDate));
+
+				var utcNow = DateTime.UtcNow;
+
+				if (effectiveDate < utcNow) effectiveDate = null; // If earlier than now, set to null to signal 'as soon as possible'.
+			}
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
@@ -1655,7 +1681,7 @@ namespace Grammophone.Domos.Accounting
 				request.Category = category;
 				request.MainAccount = mainAccount;
 				request.TransferAccount = amount > 0.0M ? transferAccount : null; // Transfer is only needed during withdrawal.
-				request.Group = await GetOrCreateFundsTransferRequestGroupAsync(encryptedBankAccountInfo, bankAccountHolderName, accountHolderToken);
+				request.Group = await GetOrCreateFundsTransferRequestGroupAsync(encryptedBankAccountInfo, bankAccountHolderName, accountHolderToken, effectiveDate);
 				request.Comments = requestComments;
 
 				long? pendingBatchMessageID = null;
@@ -1707,6 +1733,7 @@ namespace Grammophone.Domos.Accounting
 		/// <param name="requestComments">Optional comments for the request. Maximum length is <see cref="FundsTransferRequest.CommentsLength"/>.</param>
 		/// <param name="pendingEventComments">Optional comments for the generated 'pending' event. Maximum length is <see cref="FundsTransferEvent.CommentsLength"/>.</param>
 		/// <param name="accountHolderToken">Optional token for specifying a different grouping of requests to the same holder in lines of the transfer file. Requests with null tokens are also grouped together.</param>
+		/// <param name="effectiveDate">Optional effective date in UTC for the request, or null to be executed as soon as possible.</param>
 		/// <returns>
 		/// Returns the queuing event of the funds transfer request
 		/// and optionally the journal which moves the amount to the retaining account of the holder,
@@ -1722,7 +1749,8 @@ namespace Grammophone.Domos.Accounting
 			long? batchID = null,
 			string requestComments = null,
 			string pendingEventComments = null,
-			string accountHolderToken = null)
+			string accountHolderToken = null,
+			DateTime? effectiveDate = null)
 		{
 			if (transferableFundsHolder == null) throw new ArgumentNullException(nameof(transferableFundsHolder));
 			if (bankAccountHolderName == null) throw new ArgumentNullException(nameof(bankAccountHolderName));
@@ -1738,7 +1766,8 @@ namespace Grammophone.Domos.Accounting
 				batchID,
 				requestComments,
 				pendingEventComments,
-				accountHolderToken);
+				accountHolderToken,
+				effectiveDate);
 		}
 
 		/// <summary>
