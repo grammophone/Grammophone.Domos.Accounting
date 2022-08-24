@@ -5,14 +5,8 @@
     <AssemblyTitle>Grammophone.Domos.Accounting</AssemblyTitle>
     <Product>Grammophone.Domos.Accounting</Product>
     <Copyright>Copyright ©  2016</Copyright>
-    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\Grammophone.Domos.Accounting.XML</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugType>full</DebugType>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-  </PropertyGroup>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+	</PropertyGroup>
   <ItemGroup>
     <PackageReference Include="EntityFramework" Version="6.4.4" />
 		<PackageReference Include="Z.EntityFramework.Plus.EF6" Version="1.12.22" />
