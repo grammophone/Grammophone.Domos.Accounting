@@ -1271,6 +1271,7 @@ namespace Grammophone.Domos.Accounting
 				group.EncryptedBankAccountInfo = encryptedBankAccountInfo.Clone(this.DomainContainer);
 				group.AccountHolderName = bankAccountHolderName;
 				group.AccountHolderToken = accountHolderToken;
+				group.EffectiveDate = effectiveDate;
 
 				await transaction.CommitAsync();
 
