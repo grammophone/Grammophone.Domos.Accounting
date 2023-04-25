@@ -941,14 +941,12 @@ namespace Grammophone.Domos.Accounting
 										break;
 									}
 								}
-								else
-								{
-									if (await FailureEventExistsForRequestAsync(request.ID))
-									{
-										inhibitJournalAppend = true;
 
-										break;
-									}
+								if (await FailureEventExistsForRequestAsync(request.ID))
+								{
+									inhibitJournalAppend = true;
+
+									break;
 								}
 
 								journal = CreateJournalForFundsTransferEvent(transferEvent);
@@ -969,31 +967,30 @@ namespace Grammophone.Domos.Accounting
 							}
 							else if (request.Amount < 0.0M)
 							{
-								switch (eventType)
+								if (eventType == FundsTransferEventType.Returned)
 								{
-									case FundsTransferEventType.Returned:
-										// Did we catch returned item on time? Or do we have previous success?
-										if (await SuccessEventExistsForRequestAsync(request.ID))
-										{
-											// Too late, handle late returned items.
+									// Did we catch returned item on time? Or do we have previous success?
+									if (await SuccessEventExistsForRequestAsync(request.ID))
+									{
+										// Too late, handle late returned items.
 
-											journal = CreateJournalForFundsTransferEvent(transferEvent);
+										journal = CreateJournalForFundsTransferEvent(transferEvent);
 
-											await OnIngoingFundsTransferReturnAsync(transferEvent, journal);
-										}
-										else
-										{
-											inhibitJournalAppend = true;
-										}
+										await OnIngoingFundsTransferReturnAsync(transferEvent, journal);
+
+										inhibitJournalAppend = true;
+										
 										break;
+									}
 
-									default:
-										// Did we have a failure already?
-										if (await FailureEventExistsForRequestAsync(request.ID))
-										{
-											inhibitJournalAppend = true;
-										}
-										break;
+								}
+
+								// Did we have a failure already?
+								if (await FailureEventExistsForRequestAsync(request.ID))
+								{
+									inhibitJournalAppend = true;
+
+									break;
 								}
 
 							}
