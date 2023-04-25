@@ -1367,6 +1367,15 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
+		/// Overridable callback to specify whether an account can go negative balance in a journal.
+		/// The default implementation always returns false.
+		/// </summary>
+		/// <param name="journal">The journal to be executed.</param>
+		/// <param name="account">The account to test.</param>
+		/// <returns>The default implementation always returns false.</returns>
+		protected virtual bool IsAccountAllowedNegativeBalance(J journal, Account account) => false;
+
+		/// <summary>
 		/// Ensures that no account will fall to negative balance or move further into negative balance
 		/// after the execution of the journal.
 		/// </summary>
@@ -1381,7 +1390,7 @@ namespace Grammophone.Domos.Accounting
 
 			IReadOnlyDictionary<Account, decimal> futureBalancesByAccount = PredictAccountBalances(journal);
 
-			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M && entry.Value < entry.Key.Balance))
+			if (futureBalancesByAccount.Any(entry => !IsAccountAllowedNegativeBalance(journal, entry.Key) && entry.Value < 0.0M && entry.Value < entry.Key.Balance))
 				throw new NegativeBalanceException(futureBalancesByAccount);
 		}
 
@@ -1404,7 +1413,7 @@ namespace Grammophone.Domos.Accounting
 
 			IReadOnlyDictionary<Account, decimal> futureBalancesByAccount = PredictAccountBalances(journal);
 
-			if (futureBalancesByAccount.Any(entry => entry.Value < 0.0M && entry.Value < entry.Key.Balance && testedAccountPredicate(entry.Key)))
+			if (futureBalancesByAccount.Any(entry => !IsAccountAllowedNegativeBalance(journal, entry.Key) && entry.Value < 0.0M && entry.Value < entry.Key.Balance && testedAccountPredicate(entry.Key)))
 				throw new NegativeBalanceException(futureBalancesByAccount);
 		}
 
