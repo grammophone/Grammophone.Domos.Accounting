@@ -859,6 +859,7 @@ namespace Grammophone.Domos.Accounting
 						"The added event is older than existing events of the request.");
 
 				var transferEvent = this.DomainContainer.FundsTransferEvents.Create();
+				this.DomainContainer.FundsTransferEvents.Add(transferEvent);
 
 				transferEvent.Comments = comments;
 				transferEvent.ResponseCode = responseCode;
@@ -1026,8 +1027,6 @@ namespace Grammophone.Domos.Accounting
 						}
 						break;
 				}
-
-				this.DomainContainer.FundsTransferEvents.Add(transferEvent);
 
 				if (exception == null)
 				{
