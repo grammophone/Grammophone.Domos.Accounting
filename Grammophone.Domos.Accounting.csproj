@@ -9,7 +9,7 @@
 	</PropertyGroup>
   <ItemGroup>
     <PackageReference Include="EntityFramework" Version="6.4.4" />
-		<PackageReference Include="Z.EntityFramework.Plus.EF6" Version="1.12.22" />
+		<PackageReference Include="Z.EntityFramework.Plus.EF6" Version="8.103.5" />
 		<PackageReference Include="System.ComponentModel.Annotations" Version="4.7.0" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="4.7.0" />
 	</ItemGroup>
