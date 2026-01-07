@@ -128,6 +128,11 @@ namespace Grammophone.Domos.Accounting
 				// NOP.
 			}
 
+			public void OnAdded(object entity)
+			{
+				// NOP.
+			}
+
 			#endregion
 
 			#region Private methods
