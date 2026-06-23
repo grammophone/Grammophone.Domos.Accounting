@@ -26,3 +26,11 @@ This library expects your solution referencing the following libraries being in 
 * [Grammophone.Setup](https://github.com/grammophone/Grammophone.Setup)
 * [Grammophone.Serialization](https://github.com/grammophone/Grammophone.Serialization)
 * [Grammophone.Domos.Domain](https://github.com/grammophone/Grammophone.Domos.Domain)
+
+## Documentation
+
+- [Overview](documentation/overview.md)
+- [Accounting session](documentation/accounting-session.md)
+- [Funds transfer workflow](documentation/funds-transfer-workflow.md)
+- [Invoice support](documentation/invoice-support.md)
+- [Encryption and exceptions](documentation/encryption-and-exceptions.md)
