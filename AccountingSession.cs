@@ -393,31 +393,24 @@ namespace Grammophone.Domos.Accounting
 
 				var pendingBatchMessage = await CreateFundsTransferBatchAsync(creditSystem);
 
-				try
-				{
-					// First update the events, otherqise, changing the requests to have a batch renders void the requests query.
-					var pendingEvents = from r in requests
-															from e in r.Events
-															where e.Type == FundsTransferEventType.Pending
-															select e;
+				// First update the events, otherqise, changing the requests to have a batch renders void the requests query.
+				var pendingEvents = from r in requests
+														from e in r.Events
+														where e.Type == FundsTransferEventType.Pending
+														select e;
 
 
-					await pendingEvents.ExecuteUpdateAsync(setters => setters
-						.SetProperty(e => e.BatchMessageID, (long?)pendingBatchMessage.ID));
+				await pendingEvents.ExecuteUpdateAsync(setters => setters
+					.SetProperty(e => e.BatchMessageID, (long?)pendingBatchMessage.ID));
 
-					// Don't use 'requests' directly for batch update because it fails when called by a CompositeFundsTransferManager due to some EF+ bug.
-					var pendingRequests = from pr in this.DomainContainer.FundsTransferRequests
-																where requests.Any(r => r.ID == pr.ID)
-																select pr;
+				// Don't use 'requests' directly for batch update because it fails when called by a CompositeFundsTransferManager due to some EF+ bug.
+				var pendingRequests = from pr in this.DomainContainer.FundsTransferRequests
+															where requests.Any(r => r.ID == pr.ID)
+															select pr;
 
-					// Now that the events are updated, safely update the requests to have a batch.
-					await pendingRequests.ExecuteUpdateAsync(setters => setters
-						.SetProperty(r => r.BatchID, (long?)pendingBatchMessage.BatchID));
-				}
-				catch (SystemException ex) // Translation exception is needed for the batch update operations.
-				{
-					throw this.DomainContainer.TranslateException(ex);
-				}
+				// Now that the events are updated, safely update the requests to have a batch.
+				await pendingRequests.ExecuteUpdateAsync(setters => setters
+					.SetProperty(r => r.BatchID, (long?)pendingBatchMessage.BatchID));
 
 				await transaction.CommitAsync();
 
@@ -1908,49 +1901,42 @@ namespace Grammophone.Domos.Accounting
 		{
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
-				try
+				bool invoiceExists = await this.DomainContainer.Invoices.AnyAsync(i => i.ID == invoiceID);
+
+				if (!invoiceExists)
 				{
-					bool invoiceExists = await this.DomainContainer.Invoices.AnyAsync(i => i.ID == invoiceID);
+					transaction.Pass();
 
-					if (!invoiceExists)
-					{
-						transaction.Pass();
-
-						return false;
-					}
-
-					bool eventsExist = await this.DomainContainer.InvoiceEvents.AnyAsync(ie => ie.InvoiceID == invoiceID);
-
-					if (eventsExist)
-						throw new AccountingException($"The invoice with ID {invoiceID} cannot be deleted because it has events recorded.");
-
-					var taxComponentsQuery = from tc in this.DomainContainer.InvoiceLineTaxComponents
-																	 join l in this.DomainContainer.InvoiceLines on tc.LineID equals l.ID
-																	 where l.InvoiceID == invoiceID
-																	 select tc;
-
-					await taxComponentsQuery.ExecuteDeleteAsync();
-
-					var linesQuery = from l in this.DomainContainer.InvoiceLines
-													 where l.InvoiceID == invoiceID
-													 select l;
-
-					await linesQuery.ExecuteDeleteAsync();
-
-					var invoiceQuery = from i in this.DomainContainer.Invoices
-														 where i.ID == invoiceID
-														 select i;
-
-					await invoiceQuery.ExecuteDeleteAsync();
-
-					await transaction.CommitAsync();
-
-					return true;
+					return false;
 				}
-				catch (SystemException ex)
-				{
-					throw this.DomainContainer.TranslateException(ex);
-				}
+
+				bool eventsExist = await this.DomainContainer.InvoiceEvents.AnyAsync(ie => ie.InvoiceID == invoiceID);
+
+				if (eventsExist)
+					throw new AccountingException($"The invoice with ID {invoiceID} cannot be deleted because it has events recorded.");
+
+				var taxComponentsQuery = from tc in this.DomainContainer.InvoiceLineTaxComponents
+														 join l in this.DomainContainer.InvoiceLines on tc.LineID equals l.ID
+														 where l.InvoiceID == invoiceID
+														 select tc;
+
+				await taxComponentsQuery.ExecuteDeleteAsync();
+
+				var linesQuery = from l in this.DomainContainer.InvoiceLines
+											 where l.InvoiceID == invoiceID
+											 select l;
+
+				await linesQuery.ExecuteDeleteAsync();
+
+				var invoiceQuery = from i in this.DomainContainer.Invoices
+												 where i.ID == invoiceID
+												 select i;
+
+				await invoiceQuery.ExecuteDeleteAsync();
+
+				await transaction.CommitAsync();
+
+				return true;
 			}
 		}
 
