@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Data.Entity;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using Grammophone.DataAccess.QueryExtensions;
 using Grammophone.Domos.Accounting.Models;
 using Grammophone.Domos.DataAccess;
 using Grammophone.Domos.Domain;
 using Grammophone.Domos.Domain.Accounting;
 using Grammophone.Domos.Domain.Workflow;
 using Grammophone.Setup;
-using Z.EntityFramework.Plus;
 
 namespace Grammophone.Domos.Accounting
 {
@@ -402,7 +401,9 @@ namespace Grammophone.Domos.Accounting
 															where e.Type == FundsTransferEventType.Pending
 															select e;
 
-					await pendingEvents.UpdateAsync(e => new FundsTransferEvent { BatchMessageID = pendingBatchMessage.ID });
+
+					await pendingEvents.ExecuteUpdateAsync(setters => setters
+						.SetProperty(e => e.BatchMessageID, (long?)pendingBatchMessage.ID));
 
 					// Don't use 'requests' directly for batch update because it fails when called by a CompositeFundsTransferManager due to some EF+ bug.
 					var pendingRequests = from pr in this.DomainContainer.FundsTransferRequests
@@ -410,7 +411,8 @@ namespace Grammophone.Domos.Accounting
 																select pr;
 
 					// Now that the events are updated, safely update the requests to have a batch.
-					await pendingRequests.UpdateAsync(r => new FundsTransferRequest { BatchID = pendingBatchMessage.BatchID });
+					await pendingRequests.ExecuteUpdateAsync(setters => setters
+						.SetProperty(r => r.BatchID, (long?)pendingBatchMessage.BatchID));
 				}
 				catch (SystemException ex) // Translation exception is needed for the batch update operations.
 				{
@@ -1927,19 +1929,19 @@ namespace Grammophone.Domos.Accounting
 																	 where l.InvoiceID == invoiceID
 																	 select tc;
 
-					await taxComponentsQuery.DeleteAsync();
+					await taxComponentsQuery.ExecuteDeleteAsync();
 
 					var linesQuery = from l in this.DomainContainer.InvoiceLines
 													 where l.InvoiceID == invoiceID
 													 select l;
 
-					await linesQuery.DeleteAsync();
+					await linesQuery.ExecuteDeleteAsync();
 
 					var invoiceQuery = from i in this.DomainContainer.Invoices
 														 where i.ID == invoiceID
 														 select i;
 
-					await invoiceQuery.DeleteAsync();
+					await invoiceQuery.ExecuteDeleteAsync();
 
 					await transaction.CommitAsync();
 
