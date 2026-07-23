@@ -1678,6 +1678,10 @@ namespace Grammophone.Domos.Accounting
 
 			using (var transaction = this.DomainContainer.BeginTransaction())
 			{
+				// Before creating the request, get or create the request group for it, while the request is not created and not tracked, to avoid
+				// a session-tracked request being saved prematurely when a new group needs to be created.
+				var requestGroup = await GetOrCreateFundsTransferRequestGroupAsync(encryptedBankAccountInfo, bankAccountHolderName, accountHolderToken, effectiveDate);
+
 				var request = this.DomainContainer.FundsTransferRequests.Create();
 				this.DomainContainer.FundsTransferRequests.Add(request);
 
@@ -1687,7 +1691,7 @@ namespace Grammophone.Domos.Accounting
 				request.Category = category;
 				request.MainAccount = mainAccount;
 				request.TransferAccount = amount > 0.0M ? transferAccount : null; // Transfer is only needed during withdrawal.
-				request.Group = await GetOrCreateFundsTransferRequestGroupAsync(encryptedBankAccountInfo, bankAccountHolderName, accountHolderToken, effectiveDate);
+				request.Group = requestGroup;
 				request.Comments = requestComments;
 
 				long? pendingBatchMessageID = null;
