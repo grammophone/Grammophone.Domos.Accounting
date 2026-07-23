@@ -1327,7 +1327,12 @@ namespace Grammophone.Domos.Accounting
 			{
 				using (var transaction = this.DomainContainer.BeginTransaction())
 				{
-					this.DomainContainer.Journals.Add(journal);
+					// The journal may already be tracked, and even persisted by an intervening nested commit,
+					// by the time it is executed. Adding it again would mark it for insertion a second time.
+					if (this.DomainContainer.Entry(journal).State == Grammophone.DataAccess.TrackingState.Detached)
+					{
+						this.DomainContainer.Journals.Add(journal);
+					}
 
 					AmendAccounts(journal.Postings);
 					AmendAccounts(journal.Remittances);
