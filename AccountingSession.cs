@@ -1038,6 +1038,13 @@ namespace Grammophone.Domos.Accounting
 						}
 
 						await asyncJournalAppendAction(journal);
+
+						if (journal.Postings.Count == 0 && journal.Remittances.Count == 0)
+						{
+							this.DomainContainer.Journals.Remove(journal);
+
+							journal = null;
+						}
 					}
 
 					if (journal != null)
