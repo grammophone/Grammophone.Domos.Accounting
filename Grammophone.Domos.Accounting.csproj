@@ -6,6 +6,7 @@
     <Product>Grammophone.Domos.Accounting</Product>
     <Copyright>Copyright ©  2016</Copyright>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<LangVersion>9.0</LangVersion>
 	</PropertyGroup>
   <ItemGroup>
 		<PackageReference Include="System.ComponentModel.Annotations" Version="4.7.0" />
@@ -37,6 +38,10 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Update="AccountingMessages.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>AccountingMessages.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
     <EmbeddedResource Update="Models\BankAccountInfoResources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>BankAccountInfoResources.Designer.cs</LastGenOutput>

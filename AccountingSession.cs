@@ -809,6 +809,7 @@ namespace Grammophone.Domos.Accounting
 			switch (eventType)
 			{
 				case FundsTransferEventType.Pending:
+				case FundsTransferEventType.Aborted:
 					break;
 
 				default:
@@ -856,7 +857,7 @@ namespace Grammophone.Domos.Accounting
 
 				if (eventIsNotnew)
 					throw new AccountingException(
-						"The added event is older than existing events of the request.");
+						"The added event is not compatible with the sequence of the existing events of the request.");
 
 				var transferEvent = this.DomainContainer.FundsTransferEvents.Create();
 				this.DomainContainer.FundsTransferEvents.Add(transferEvent);
@@ -919,11 +920,18 @@ namespace Grammophone.Domos.Accounting
 						}
 						break;
 
+					case FundsTransferEventType.Aborted:
 					case FundsTransferEventType.Failed:
 					case FundsTransferEventType.Rejected:
 					case FundsTransferEventType.Returned:
 						if (exception == null)
 						{
+							// If aborting is valid (as no conflicting more recent events exist), also remove it from the batch - we don't wan to snd batches with aborted requests.
+							if (eventType == FundsTransferEventType.Aborted && batch != null)
+							{
+								request.Batch = null;
+							}
+
 							if (request.Amount > 0.0M)
 							{
 								if (eventType == FundsTransferEventType.Returned)
@@ -952,7 +960,11 @@ namespace Grammophone.Domos.Accounting
 
 								journal = CreateJournalForFundsTransferEvent(transferEvent);
 
-								journal.Description = AccountingMessages.TRANSFER_FAILED;
+								journal.Description = eventType switch
+								{
+									FundsTransferEventType.Aborted => AccountingMessages.TRANSFER_ABORTED,
+									_ => AccountingMessages.TRANSFER_FAILED
+								};
 
 								P moveFromTransferAccountPosting = CreatePostingForJournal(journal);
 

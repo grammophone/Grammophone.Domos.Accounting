@@ -147,6 +147,9 @@
   <data name="MOVE_AMOUNT_TO_TRANSFER_ACCOUNT" xml:space="preserve">
     <value>Move withdrawn amount to outgoung transfer account.</value>
   </data>
+  <data name="TRANSFER_ABORTED" xml:space="preserve">
+    <value>The funds transfer has been aborted.</value>
+  </data>
   <data name="TRANSFER_FAILED" xml:space="preserve">
     <value>The funds transfer has failed.</value>
   </data>
