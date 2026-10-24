@@ -419,6 +419,45 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
+		/// Unenroll a set of funds transfer requests from their batches, if possible.
+		/// </summary>
+		/// <param name="requests">The set of funds transfer requests.</param>
+		/// <exception cref="AccountingException">
+		/// Thrown when a request canot be unbatched, or when the batch has been submitted.
+		/// </exception>
+		public async Task UnenrollRequestsFromBatchAsync(IQueryable<FundsTransferRequest> requests)
+		{
+			if (requests == null) throw new ArgumentNullException(nameof(requests));
+
+			using(var transaction = this.DomainContainer.BeginTransaction())
+			{
+				var batchesBeyondEdit = from request in requests
+																where request.Batch != null
+																let batch = request.Batch
+																where batch.Messages.Any(m => m.Type > FundsTransferBatchMessageType.Pending)
+																select batch;
+
+				if (await batchesBeyondEdit.AnyAsync())
+				{
+					throw new AccountingException("There is at least one batch which cannot be edited.");
+				}
+
+				var requestsBeyondEdit = from request in requests
+																 where request.Events.Any(e => e.Type >= FundsTransferEventType.Submitted)
+																 select request;
+
+				if (await requestsBeyondEdit.AnyAsync())
+				{
+					throw new AccountingException("There is at least one request which cannot be unbatched.");
+				}
+
+				await requests.ExecuteUpdateAsync(setters => setters.SetProperty(request => request.BatchID, (long?)null));
+
+				await transaction.CommitAsync();
+			}
+		}
+
+		/// <summary>
 		/// Create and persist a <see cref="FundsTransferRequest"/> and record
 		/// a <see cref="FundsTransferEvent"/> of type <see cref="FundsTransferEventType.Pending"/>
 		/// in it.
@@ -929,6 +968,12 @@ namespace Grammophone.Domos.Accounting
 							// If aborting is valid (as no conflicting more recent events exist), also remove it from the batch - we don't wan to snd batches with aborted requests.
 							if (eventType == FundsTransferEventType.Aborted && batch != null)
 							{
+								bool isBatchUneditable = await this.DomainContainer.FundsTransferBatchMessages
+									.AnyAsync(m => m.BatchID == batch.ID && m.Type > FundsTransferBatchMessageType.Pending);
+
+								if (isBatchUneditable)
+									throw new AccountingException($"The batch with ID {batch.ID} is no longer changeable.");
+
 								request.Batch = null;
 							}
 
