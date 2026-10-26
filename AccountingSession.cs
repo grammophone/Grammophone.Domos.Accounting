@@ -1864,8 +1864,8 @@ namespace Grammophone.Domos.Accounting
 
 		/// <summary>
 		/// Return true whether a request contains a successfully digested event of
-		/// type <see cref="FundsTransferEventType.Failed"/>, <see cref="FundsTransferEventType.Rejected"/>
-		/// or <see cref="FundsTransferEventType.Returned"/>.
+		/// type <see cref="FundsTransferEventType.Failed"/>, <see cref="FundsTransferEventType.Rejected"/>,
+		/// <see cref="FundsTransferEventType.Returned"/> or <see cref="FundsTransferEventType.Aborted"/>.
 		/// </summary>
 		/// <param name="requestID">The ID of the request.</param>
 		private async Task<bool> FailureEventExistsForRequestAsync(long requestID)
@@ -1874,6 +1874,7 @@ namespace Grammophone.Domos.Accounting
 									where e.RequestID == requestID && e.ExceptionData == null
 									where e.Type == FundsTransferEventType.Failed || e.Type == FundsTransferEventType.Rejected
 									|| e.Type == FundsTransferEventType.Returned
+									|| e.Type == FundsTransferEventType.Aborted
 									select e;
 
 			return await query.AnyAsync();
