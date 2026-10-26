@@ -419,6 +419,63 @@ namespace Grammophone.Domos.Accounting
 		}
 
 		/// <summary>
+		/// Enroll a set of funds transfer requests into an existing <see cref="FundsTransferBatch"/>,
+		/// which must not have been submitted yet, ie it must have no message beyond <see cref="FundsTransferBatchMessageType.Pending"/>.
+		/// The requests must not be already under an existing batch.
+		/// </summary>
+		/// <param name="batchID">The ID of the batch.</param>
+		/// <param name="requests">The set of funds transfer requests.</param>
+		/// <returns>Returns the pending message of the batch, where the requests are attached.</returns>
+		/// <exception cref="AccountingException">
+		/// Thrown when at least one request is already assigned to a batch, or when the batch is no longer changeable.
+		/// </exception>
+		public async Task<FundsTransferBatchMessage> EnrollRequestsIntoExistingBatchAsync(long batchID, IQueryable<FundsTransferRequest> requests)
+		{
+			if (requests == null) throw new ArgumentNullException(nameof(requests));
+
+			using (var transaction = this.DomainContainer.BeginTransaction())
+			{
+				bool requestsAlreadyInBatch = await requests.AnyAsync(r => r.Batch != null);
+
+				if (requestsAlreadyInBatch)
+					throw new AccountingException("There is at least one request already in a batch.");
+
+				bool isBatchUneditable = await this.DomainContainer.FundsTransferBatchMessages
+					.AnyAsync(m => m.BatchID == batchID && m.Type > FundsTransferBatchMessageType.Pending);
+
+				if (isBatchUneditable)
+					throw new AccountingException($"The batch with ID {batchID} is no longer changeable.");
+
+				var pendingBatchMessage = await this.DomainContainer.FundsTransferBatchMessages
+					.SingleOrDefaultAsync(m => m.BatchID == batchID && m.Type == FundsTransferBatchMessageType.Pending);
+
+				if (pendingBatchMessage == null)
+					throw new AccountingException($"There is no 'Pending' message for the batch with ID {batchID}.");
+
+				// As with a new batch, first update the events, otherwise, changing the requests to have a batch renders void the requests query.
+				var pendingEvents = from r in requests
+														from e in r.Events
+														where e.Type == FundsTransferEventType.Pending
+														select e;
+
+				await pendingEvents.ExecuteUpdateAsync(setters => setters
+					.SetProperty(e => e.BatchMessageID, (long?)pendingBatchMessage.ID));
+
+				// Don't use 'requests' directly for batch update because it fails when called by a CompositeFundsTransferManager due to some EF+ bug.
+				var pendingRequests = from pr in this.DomainContainer.FundsTransferRequests
+															where requests.Any(r => r.ID == pr.ID)
+															select pr;
+
+				await pendingRequests.ExecuteUpdateAsync(setters => setters
+					.SetProperty(r => r.BatchID, (long?)batchID));
+
+				await transaction.CommitAsync();
+
+				return pendingBatchMessage;
+			}
+		}
+
+		/// <summary>
 		/// Unenroll a set of funds transfer requests from their batches, if possible.
 		/// </summary>
 		/// <param name="requests">The set of funds transfer requests.</param>
